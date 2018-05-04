@@ -14,7 +14,7 @@ function _init()
  player.is_jumping = false
  player.jump_tstart = 0
  player.jump_tprev = 0
- player.jump_sp = 0 --speed
+ player.jump_h = 0 --height
   --[[
   which jump are you on?
   0 = not jumping
@@ -23,6 +23,8 @@ function _init()
   3 = triple jump (can no longer jump)
   ]]
  player.njump = 0
+ player.jump1 = 16 --height of first jump
+ player.jumpxtra = 8 --height of extra jumps
 
   
  -- player static variables --
@@ -41,7 +43,7 @@ function can_jump()
   return false
  end
  if player.njump == 2 and 
-    player.can_triplej then
+    not player.can_triplej then
   return false
  end
  return true 
@@ -52,18 +54,24 @@ function start_jump()
  player.jump_tprev = time()
  player.is_jumping = true
  if player.njump==0 then
-  player.jump_sp = 16
+  player.jump_h = player.jump1
  else
-  player.jump_sp = 8
+  player.jump_h = player.jumpxtra
  end
+ player.y -= 1
+ player.njump += 1
 end
 
 function jump()
  local dt = time() - player.jump_tprev
- if dt > 0.5 then
-  --do some jumping
-  
+ if dt > 0.005 and 
+    player.jump_h > 0
+ then --do some jumping
+  player.y -= 2
+  player.jump_h -= 1
+  player.jump_tprev = time()
  end
+ if(player.jump_h==0) player.is_jumping = false
 end
 
 function fall()
@@ -73,7 +81,7 @@ function fall()
  if fget(mget(x1,y),0) or
     fget(mget(x2,y),0)
  then
-  player.is_jumping = false
+  player.njump = 0
  else
   if(not player.is_jumping) player.y += 1
  end
@@ -82,8 +90,8 @@ end
 function _update60()
  if(btn(0)) player.x -= 1
  if(btn(1)) player.x += 1
- if(btn(2)) then
-  if(can_jump()) start_jump()
+ if btnp(2) and can_jump() then
+  start_jump()
  end
  if(player.is_jumping) jump()
  fall()

@@ -65,7 +65,9 @@ end
 function jump()
  local dt = time() - player.jump_tprev
  --check for ceiling
- if v_collide(player.x,player.x+7,player.y-1,0)
+ local x1 = player.x
+ local x2 = player.x+player.stand_h*8-1
+ if v_collide(x1,x2,player.y-1,0)
  then
   player.jump_h = 0 --end jump
  end
@@ -80,10 +82,10 @@ function jump()
 end
 
 function fall()
- local y = (player.y+15+1)/8
- local x1 = (player.x)/8
- local x2 = (player.x+7)/8
- if v_collide(player.x,player.x+7,player.y+16,0)
+ local y = player.y+player.stand_h*8
+ local x1 = player.x
+ local x2 = player.x+player.stand_w*8-1
+ if v_collide(x1,x2,y,0)
  then
   player.njump = 0
  else
@@ -116,8 +118,12 @@ function v_collide(x1,x2,y,flag)
 end
 -->8
 function _update60()
- if(btn(0) and not h_collide(player.x-1,player.y,player.y+15,0)) player.x -= 1
- if(btn(1) and not h_collide(player.x+8,player.y,player.y+15,0)) player.x += 1
+ local xl = player.x-1
+ local xr = player.x+player.stand_w*8
+ local y1 = player.y
+ local y2 = player.y+player.stand_h*8-1
+ if(btn(0) and not h_collide(x1,y1,y2,0)) player.x -= 1
+ if(btn(1) and not h_collide(x2,y1,y2,0)) player.x += 1
  if btnp(2) and can_jump() then
   start_jump()
  end

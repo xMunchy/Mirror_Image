@@ -66,7 +66,7 @@ function jump()
  local dt = time() - player.jump_tprev
  --check for ceiling
  local x1 = player.x
- local x2 = player.x+player.s_h*8-1
+ local x2 = player.x+player.s_w*8-1
  if v_collide(x1,x2,player.y-1,0)
  then
   player.jump_h = 0 --end jump

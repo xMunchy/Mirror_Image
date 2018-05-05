@@ -2,6 +2,9 @@ pico-8 cartridge // http://www.pico-8.com
 version 16
 __lua__
 function _init()
+ -- game variables --
+ prev_t = time()
+ 
  -- player dynamic variables --
  player = {}
  player.s = 1 --sprite
@@ -9,6 +12,7 @@ function _init()
  player.s_h = 2
  player.x = 0 --position
  player.y = 0
+ player.speed = 32
  player.is_crouching = false
  -- player jumping --
  player.is_jumping = false
@@ -31,14 +35,19 @@ function _init()
  player.stand_s = 1 --sprite
  player.stand_w = 1 --sprite size
  player.stand_h = 2
+ player.stand_speed = 32
  player.crouch_s = 18 --sprite
  player.crouch_w = 1 --sprite size
  player.crouch_h = 1
+ player.crouch_speed = 16
  player.can_triplej = false
 
 end
 -->8
 function can_jump()
+ if player.is_crouching then
+  return false
+ end
  if player.njump == 3 then
   return false
  end
@@ -124,27 +133,36 @@ function v_collide(x1,x2,y,flag)
 end
 -->8
 function _update60()
+ dt = time() - prev_t
+ prev_t = time()
  local x1 = player.x
  local x2 = player.x+player.s_w*8
  local y1 = player.y
  local y2 = player.y+player.s_h*8
- if(btn(0) and not h_collide(x1-1,y1,y2-1,0)) player.x -= 1
- if(btn(1) and not h_collide(x2,y1,y2-1,0)) player.x += 1
+ -- walk
+ if(btn(0) and not h_collide(x1-1,y1,y2-1,0)) player.x -= player.speed*dt
+ if(btn(1) and not h_collide(x2,y1,y2-1,0)) player.x += player.speed*dt
+ -- jump
  if btnp(2) and can_jump() then
   start_jump()
  end
+ -- crouch
  if btn(3) then
+  player.is_crouching = true
   player.y += (player.s_h-player.crouch_h)*8
   player.x += (player.s_w-player.crouch_w)*8
   player.s = player.crouch_s
   player.s_h = player.crouch_h
   player.s_w = player.crouch_w
+  player.speed = player.crouch_speed
  elseif not v_collide(x1,x2,y1-1,0) then
+  player.is_crouching = false
   player.y += (player.s_h-player.stand_h)*8
   player.x += (player.s_w-player.stand_w)*8
   player.s = player.stand_s
   player.s_h = player.stand_h
   player.s_w = player.stand_w
+  player.speed = player.stand_speed
  end
  if(player.is_jumping) jump()
  fall()

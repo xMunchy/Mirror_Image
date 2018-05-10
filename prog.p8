@@ -56,6 +56,7 @@ function _init()
  blast.s_h = 1
  blast.w = 3 --size by pixels
  blast.h = 3 --size by pixels
+ blast.speed = 2
 end
 -->8
 function can_jump()
@@ -169,10 +170,10 @@ function shoot()
  blast[k].y = player.y+8
  if player.flipped then --left
   blast[k].x = player.x-blast.w
-  blast[k].mx = -1
+  blast[k].mx = -blast.speed
  else --right
   blast[k].x = player.x+player.s_w*8
-  blast[k].mx = 1
+  blast[k].mx = blast.speed
  end
 end
 

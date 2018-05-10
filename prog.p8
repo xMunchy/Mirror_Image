@@ -17,6 +17,7 @@ function _init()
  player.flipped = false
  player.speed = 32
  player.is_crouching = false
+ 
  -- player jumping --
  player.is_jumping = false
  player.jump_tstart = 0
@@ -156,13 +157,15 @@ function shoot()
  if k != 0 then
   blast.last = time() --time at latest shot
   blast[k] = {}
-  blast[k].y = player.y+8
+  blast[k].y = player.y+player.s_h/2*8
   if player.flipped then --left
    blast[k].x = player.x-blast.w
    blast[k].mx = -blast.speed
+   blast[k].flipped = true
   else --right
    blast[k].x = player.x+player.s_w*8
    blast[k].mx = blast.speed
+   blast[k].flipped = false
   end
  end
 end
@@ -179,7 +182,7 @@ end
 
 function display_blasts()
  for i=1,#blast do
-  spr(blast.s,blast[i].x,blast[i].y,blast.s_w,blast.s_h)
+  spr(blast.s,blast[i].x,blast[i].y,blast.s_w,blast.s_h,blast[i].flipped)
  end
 end
 -->8
@@ -190,7 +193,7 @@ spawn enemies
 kind: enemy type
 x and y: position
 ]]
-function make_enemy(kind,x,y)
+function make_enemy(kind,x,y,flipped)
  local k = #enemy+1
  enemy[k] = {}
  enemy[k].x = x
@@ -199,11 +202,12 @@ function make_enemy(kind,x,y)
  enemy[k].s = enemy.s[kind] --sprite
  enemy[k].s_w = enemy.s_w --size
  enemy[k].s_h = enemy.s_h
+ enemy[k].flipped = flipped
 end
 
 function display_enemies()
  for i=1,#enemy do
-  spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h)
+  spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h,enemy.flipped)
  end
 end
 -->8
@@ -335,9 +339,9 @@ function _draw()
  spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
 end
 __gfx__
-0000000001000000000000001111111101000000666000000088880000cccc0000bbbb0000000000000000000000000000000000000000000000000000000000
-000000001011110000000000111111111011110066600000088888800cccccc00bbbbbb000000000000000000000000000000000000000000000000000000000
-00700700014444100000000011111111014444106660000088888888ccccccccbbbbbbbb00000000000000000000000000000000000000000000000000000000
+0000000001000000000000001111111101000000066600000088880000cccc0000bbbb0000000000000000000000000000000000000000000000000000000000
+000000001011110000000000111111111011110066660000088888800cccccc00bbbbbb000000000000000000000000000000000000000000000000000000000
+00700700014444100000000011111111014444100666000088888888ccccccccbbbbbbbb00000000000000000000000000000000000000000000000000000000
 00077000104747010000000011111111104747010000000088888888ccccccccbbbbbbbb00000000000000000000000000000000000000000000000000000000
 00077000004444000000000011111111004444000000000088888888ccccccccbbbbbbbb00000000000000000000000000000000000000000000000000000000
 00700700000400000000000011111111000400000000000088888888ccccccccbbbbbbbb00000000000000000000000000000000000000000000000000000000

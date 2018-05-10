@@ -48,6 +48,14 @@ function _init()
  enemy.s = {6,7,8}
  enemy.s_w = 1 --sprite size
  enemy.s_h = 2
+ 
+ -- player blasts --
+ blast = {}
+ blast.s = 5
+ blast.s_w = 1
+ blast.s_h = 1
+ blast.w = 3 --size by pixels
+ blast.h = 3 --size by pixels
 end
 -->8
 function can_jump()
@@ -149,6 +157,36 @@ function make_enemy(kind,x,y)
  enemy[k].s_h = enemy.s_h
 end
 
+function display_enemies()
+ for i=1,#enemy do
+  spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h)
+ end
+end
+
+function shoot()
+ local k = #blast+1
+ blast[k] = {}
+ blast[k].y = player.y+8
+ if player.flipped then --left
+  blast[k].x = player.x-blast.w
+  blast[k].mx = -1
+ else --right
+  blast[k].x = player.x+player.s_w*8
+  blast[k].mx = 1
+ end
+end
+
+function move_blasts()
+ for i=1,#blast do
+  blast[i].x += blast[i].mx
+ end
+end
+
+function display_blasts()
+ for i=1,#blast do
+  spr(blast.s,blast[i].x,blast[i].y,blast.s_w,blast.s_h)
+ end
+end
 -->8
 function _update60()
 --[[spawn one enemy
@@ -196,16 +234,19 @@ function _update60()
   player.s_w = player.stand_w
   player.speed = player.stand_speed
  end
+ if btnp(4) then
+  shoot()
+ end
  if(player.is_jumping) jump()
  fall()
+ move_blasts()
 end
 
 function _draw()
  cls()
  map(0,0,0,0)
- for i=1,#enemy do
-  spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h)
- end
+ display_enemies()
+ display_blasts()
  spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
 end
 __gfx__

@@ -1,6 +1,8 @@
 pico-8 cartridge // http://www.pico-8.com
 version 16
 __lua__
+--init
+
 function _init()
  -- game variables --
  prev_t = time()
@@ -59,6 +61,9 @@ function _init()
  blast.speed = 2
 end
 -->8
+--player
+
+--can the player jump?
 function can_jump()
  if player.is_crouching then
   return false
@@ -73,6 +78,8 @@ function can_jump()
  return true 
 end
 
+--start the jump, decide how
+--high it can get
 function start_jump()
  player.jump_tstart = time()
  player.jump_tprev = time()
@@ -86,6 +93,7 @@ function start_jump()
  player.njump += 1
 end
 
+--find new position in jump
 function jump()
  local dt = time() - player.jump_tprev
  --check for ceiling
@@ -105,6 +113,69 @@ function jump()
  if(player.jump_h==0) player.is_jumping = false
 end
 
+--[[
+shoot an energy blast in the
+direction the player is facing
+]]
+function shoot()
+ local k = #blast+1
+ blast[k] = {}
+ blast[k].y = player.y+8
+ if player.flipped then --left
+  blast[k].x = player.x-blast.w
+  blast[k].mx = -blast.speed
+ else --right
+  blast[k].x = player.x+player.s_w*8
+  blast[k].mx = blast.speed
+ end
+end
+
+--[[
+after shooting, where are
+the blasts?
+]]
+function move_blasts()
+ for i=1,#blast do
+  blast[i].x += blast[i].mx
+ end
+end
+
+function display_blasts()
+ for i=1,#blast do
+  spr(blast.s,blast[i].x,blast[i].y,blast.s_w,blast.s_h)
+ end
+end
+-->8
+--enemies
+
+--[[
+spawn enemies
+kind: enemy type
+x and y: position
+]]
+function make_enemy(kind,x,y)
+ local k = #enemy+1
+ enemy[k] = {}
+ enemy[k].x = x
+ enemy[k].y = y
+ enemy[k].kind = kind --1 ez, 2 med, 3 hard
+ enemy[k].s = enemy.s[kind] --sprite
+ enemy[k].s_w = enemy.s_w --size
+ enemy[k].s_h = enemy.s_h
+end
+
+function display_enemies()
+ for i=1,#enemy do
+  spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h)
+ end
+end
+-->8
+--collision and physics
+
+--[[
+make player fall
+simulates gravity
+]]
 function fall()
  local y = player.y+player.s_h*8
  local x1 = player.x
@@ -117,6 +188,13 @@ function fall()
  end
 end
 
+--[[
+detect horizontal map collision
+x: left or right side of player
+y1: top side of player
+y2: bottom side of player
+flag: flag of relevant map tile
+]]
 function h_collide(x,y1,y2,flag)
  -- screen boundary
  if(x>127 or x<0) return true
@@ -132,6 +210,14 @@ function h_collide(x,y1,y2,flag)
  return false
 end
 
+--[[
+detect vertical map collision
+ex. ceiling, floor
+x1: left side of player
+x2: right side
+y: top or bottom of player
+flag: flag of relevant map tile
+]]
 function v_collide(x1,x2,y,flag)
  x1 = x1
  x2 = x2
@@ -147,48 +233,9 @@ function v_collide(x1,x2,y,flag)
  return false
 end
 
-function make_enemy(kind,x,y)
- local k = #enemy+1
- enemy[k] = {}
- enemy[k].x = x
- enemy[k].y = y
- enemy[k].kind = kind --1 ez, 2 med, 3 hard
- enemy[k].s = enemy.s[kind]
- enemy[k].s_w = enemy.s_w
- enemy[k].s_h = enemy.s_h
-end
-
-function display_enemies()
- for i=1,#enemy do
-  spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h)
- end
-end
-
-function shoot()
- local k = #blast+1
- blast[k] = {}
- blast[k].y = player.y+8
- if player.flipped then --left
-  blast[k].x = player.x-blast.w
-  blast[k].mx = -blast.speed
- else --right
-  blast[k].x = player.x+player.s_w*8
-  blast[k].mx = blast.speed
- end
-end
-
-function move_blasts()
- for i=1,#blast do
-  blast[i].x += blast[i].mx
- end
-end
-
-function display_blasts()
- for i=1,#blast do
-  spr(blast.s,blast[i].x,blast[i].y,blast.s_w,blast.s_h)
- end
-end
 -->8
+--update and draw
+
 function _update60()
 --[[spawn one enemy
  if #enemy == 0 then

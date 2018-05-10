@@ -58,7 +58,10 @@ function _init()
  blast.s_h = 1
  blast.w = 3 --size by pixels
  blast.h = 3 --size by pixels
- blast.speed = 2
+ blast.speed = 2 --speed of blasts
+ blast.limit = 2 --max onscreen
+ blast.wait = 1 --time between blasts
+ blast.last = 0
 end
 -->8
 --player
@@ -78,8 +81,11 @@ function can_jump()
  return true 
 end
 
---start the jump, decide how
---high it can get
+--[[
+start the jump.
+is this a normal jump, or
+a double/triple?
+]]
 function start_jump()
  player.jump_tstart = time()
  player.jump_tprev = time()
@@ -114,19 +120,50 @@ function jump()
 end
 
 --[[
+checks if shooting is possible.
+returns valid index for new
+blast.
+criteria:
+   -number of blasts
+   -time between blasts
+]]
+function get_valid_blast()
+ local dt = time() - blast.last
+ if dt < 1 then
+  return 0
+ end
+ for i=1,#blast do
+  if blast[i].mx>0 and
+     blast[i].x>128 then
+   return i
+  elseif blast[i].mx<0 and
+         blast[i].x<-4 then
+   return i
+  end
+ end
+ if #blast < blast.limit then
+  return #blast+1
+ end
+ return 0
+end
+
+--[[
 shoot an energy blast in the
 direction the player is facing
 ]]
 function shoot()
- local k = #blast+1
- blast[k] = {}
- blast[k].y = player.y+8
- if player.flipped then --left
-  blast[k].x = player.x-blast.w
-  blast[k].mx = -blast.speed
- else --right
-  blast[k].x = player.x+player.s_w*8
-  blast[k].mx = blast.speed
+ local k = get_valid_blast()
+ if k != 0 then
+  blast.last = time() --time at latest shot
+  blast[k] = {}
+  blast[k].y = player.y+8
+  if player.flipped then --left
+   blast[k].x = player.x-blast.w
+   blast[k].mx = -blast.speed
+  else --right
+   blast[k].x = player.x+player.s_w*8
+   blast[k].mx = blast.speed
+  end
  end
 end
 

@@ -12,6 +12,7 @@ function _init()
  player.s_h = 2
  player.x = 0 --position
  player.y = 0
+ player.flipped = false
  player.speed = 32
  player.is_crouching = false
  -- player jumping --
@@ -147,6 +148,7 @@ function make_enemy(kind,x,y)
  enemy[k].s_w = enemy.s_w
  enemy[k].s_h = enemy.s_h
 end
+
 -->8
 function _update60()
 --[[spawn one enemy
@@ -160,8 +162,18 @@ function _update60()
  local y1 = player.y
  local y2 = player.y+player.s_h*8
  -- walk
- if(btn(0) and not h_collide(x1-1,y1,y2-1,0)) player.x -= player.speed*dt
- if(btn(1) and not h_collide(x2,y1,y2-1,0)) player.x += player.speed*dt
+ if btn(0) and not 
+    h_collide(x1-1,y1,y2-1,0)
+    then
+  player.x -= player.speed*dt
+  player.flipped = true
+ end
+ if btn(1) and not
+    h_collide(x2,y1,y2-1,0)
+    then
+  player.x += player.speed*dt
+  player.flipped = false
+ end
  -- jump
  if btnp(2) and can_jump() then
   start_jump()
@@ -194,7 +206,7 @@ function _draw()
  for i=1,#enemy do
   spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h)
  end
- spr(player.s,player.x,player.y,player.s_w,player.s_h)
+ spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
 end
 __gfx__
 0000000001000000000000001111111101000000666000000088880000cccc0000bbbb0000000000000000000000000000000000000000000000000000000000

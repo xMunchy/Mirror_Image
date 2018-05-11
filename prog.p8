@@ -57,11 +57,11 @@ function _init()
  blast.s = 5
  blast.s_w = 1
  blast.s_h = 1
- blast.w = 3 --size by pixels
+ blast.w = 4 --size by pixels
  blast.h = 3 --size by pixels
  blast.speed = 2 --speed of blasts
- blast.limit = 2 --max onscreen
- blast.wait = 1 --time between blasts
+ blast.limit = 5 --max onscreen
+ blast.wait = 0 --time between blasts
  blast.last = 0
 end
 -->8
@@ -130,15 +130,11 @@ criteria:
 ]]
 function get_valid_blast()
  local dt = time() - blast.last
- if dt < 1 then
+ if dt < blast.wait then
   return 0
  end
  for i=1,#blast do
-  if blast[i].mx>0 and
-     blast[i].x>128 then
-   return i
-  elseif blast[i].mx<0 and
-         blast[i].x<-4 then
+  if blast[i].y < 0 then
    return i
   end
  end
@@ -176,8 +172,20 @@ the blasts?
 ]]
 function move_blasts()
  for i=1,#blast do
-  blast[i].x += blast[i].mx
- end
+  --move only valid blasts
+  if blast[i].y>0 then
+   blast[i].x += blast[i].mx
+   --is blast still valid?
+   if blast[i].flipped and
+      blast[i].x<-4 then
+    blast[i].y=-100 --not valid
+   elseif not blast[i].flipped and
+      blast[i].x > 130 then
+    blast[i].y=-100
+   end
+   blast_hit_wall(i)
+  end--end if
+ end--end for
 end
 
 function display_blasts()
@@ -276,14 +284,34 @@ function v_collide(x1,x2,y,flag)
  return false
 end
 
+--blast map collision
+function blast_hit_wall(i)
+ local y1 = blast[i].y
+ local y2 = blast[i].y+blast.h-1
+ local x = 0
+ if blast[i].flipped then
+  x = blast[i].x+8-blast.w
+ else
+  x = blast[i].x+blast.w-1
+ end
+ --collision
+ if h_collide(x,y1,y2,0) then
+  blast[i].y = -100
+ end
+end
+
+--blast enemy collision
+function blast_hit()
+
+end
 -->8
 --update and draw
 
 function _update60()
---[[spawn one enemy
+--spawn one enemy
  if #enemy == 0 then
-  make_enemy(1,64,104)
- end]]
+  make_enemy(1,64,104,true)
+ end
  dt = time() - prev_t
  prev_t = time()
  local x1 = player.x

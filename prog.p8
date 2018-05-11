@@ -221,11 +221,13 @@ function fall()
  local y = player.y+player.s_h*8
  local x1 = player.x
  local x2 = player.x+player.s_w*8-1
- if v_collide(x1,x2,y,0)
- then
+ if v_collide(x1,x2,y,0) then
   player.njump = 0
+  if v_collide(x1,x2,y-1,0) then
+   player.y -= 1
+  end
  else
-  if(not player.is_jumping) player.y += 1
+  if(not player.is_jumping) player.y += 1.5
  end
 end
 
@@ -290,8 +292,7 @@ function _update60()
  local y2 = player.y+player.s_h*8
  -- walk
  if btn(0) and not 
-    h_collide(x1-1,y1,y2-1,0)
-    then
+    h_collide(x1-1,y1,y2-1,0) then
   player.x -= player.speed*dt
   player.flipped = true
  end
@@ -300,6 +301,14 @@ function _update60()
     then
   player.x += player.speed*dt
   player.flipped = false
+ end 
+ --walk into wall correction
+ if btn(0) or btn(1) then
+  if h_collide(x1,y1,y2-1,0) then
+   player.x += 1
+  elseif h_collide(x2-1,y1,y2-1,0) then
+   player.x -= 1
+  end
  end
  -- jump
  if btnp(2) and can_jump() then

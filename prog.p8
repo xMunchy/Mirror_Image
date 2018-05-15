@@ -75,7 +75,7 @@ function _init()
  player.evil_crouchw = 8
  player.evil_crouchh = 8
  player.evil_crouch_speed = 16
- player.evil_jump_s = 32 --sprite
+ player.evil_jump_s = 34 --sprite
  player.evil_jump_w = 1 --sprite size
  player.evil_jump_h = 2
  player.evil_jumpw = 8 --size by pixels
@@ -219,8 +219,8 @@ function kill(b,e)
   player.crouch_w = player.evil_crouch_w
   player.crouch_speed = player.evil_crouch_speed
   player.jump_s = player.evil_jump_s
-  player.jump_h = player.evil_jump_w
-  player.jump_w = player.evil_jump_h
+  player.jump_h = player.evil_jump_h
+  player.jump_w = player.evil_jump_w
   player.jumph = player.evil_jumph
   player.jumpw = player.evil_jumpw
  end

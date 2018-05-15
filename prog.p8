@@ -184,10 +184,10 @@ function move_blasts()
    --is blast still valid?
    if blast[i].flipped and
       blast[i].x<-4 then
-    blast[i].y=-100 --not valid
+    kill_blast(i) --not valid
    elseif not blast[i].flipped and
       blast[i].x > 130 then
-    blast[i].y=-100
+    kill_blast(i)
    end
    --check wall collision
    blast_hit_wall(i)
@@ -195,6 +195,14 @@ function move_blasts()
    blast_hit(i)
   end--end if
  end--end for
+end
+
+--[[
+make blasts invalid by
+moving to y=-100
+]]
+function kill_blast(i)
+ blast[i].y = -100
 end
 
 function display_blasts()
@@ -305,7 +313,7 @@ function blast_hit_wall(i)
  end
  --collision
  if h_collide(x,y1,y2,0) then
-  blast[i].y = -100
+  kill_blast(i)
  end
 end
 
@@ -328,6 +336,7 @@ function blast_hit(i)
       y2<enemy[j].y+enemy[j].s_h*8-1
      ) then
    player.kills += 1
+   kill_blast(i)
   end
  end
 end

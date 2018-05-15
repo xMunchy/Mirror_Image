@@ -49,8 +49,8 @@ function _init()
  -- enemies --
  enemy = {} --kind 1 ez, 2 med, 3 hard
  enemy.s = {6,7,8}
- enemy.s_w = 1 --sprite size
- enemy.s_h = 2
+ enemy.s_w = {1,1,2} --sprite size
+ enemy.s_h = {2,2,2}
  
  -- player blasts --
  blast = {}
@@ -213,8 +213,8 @@ function make_enemy(kind,x,y,flipped)
  enemy[k].y = y
  enemy[k].kind = kind --1 ez, 2 med, 3 hard
  enemy[k].s = enemy.s[kind] --sprite
- enemy[k].s_w = enemy.s_w --size
- enemy[k].s_h = enemy.s_h
+ enemy[k].s_w = enemy.s_w[kind] --size
+ enemy[k].s_h = enemy.s_h[kind]
  enemy[k].flipped = flipped
 end
 

@@ -30,7 +30,7 @@ function _init()
  player.is_jumping = false
  player.jump_tstart = 0
  player.jump_tprev = 0
- player.jump_h = 0 --height
+ player.jump_prog = 0 --height
   --[[
   which jump are you on?
   0 = not jumping
@@ -58,6 +58,11 @@ function _init()
  player.crouchw = 8 --size by pixels
  player.crouchh = 8
  player.crouch_speed = 16
+ player.jump_s = 4 --sprite
+ player.jump_w = 1 --sprite size
+ player.jump_h = 2
+ player.jumpw = 8 --size by pixels
+ player.jumph = 16
  player.evil_stand_s = 32 --sprite
  player.evil_stand_w = 1 --sprite size
  player.evil_stand_h = 2
@@ -70,6 +75,11 @@ function _init()
  player.evil_crouchw = 8
  player.evil_crouchh = 8
  player.evil_crouch_speed = 16
+ player.evil_jump_s = 32 --sprite
+ player.evil_jump_w = 1 --sprite size
+ player.evil_jump_h = 2
+ player.evil_jumpw = 8 --size by pixels
+ player.evil_jumph = 16
  player.can_triplej = false
  player.stun_dur = 1
  player.knock = 10 --knockback when touch enemy
@@ -146,13 +156,21 @@ is this a normal jump, or
 a double/triple?
 ]]
 function start_jump()
+ --change sprite
+ player.s = player.jump_s
+ player.s_h = player.jump_h
+ player.s_w = player.jump_w
+ player.sw = player.jumpw
+ player.sh = player.jumph
+ --start jump
  player.jump_tstart = time()
  player.jump_tprev = time()
  player.is_jumping = true
+ --choose jump height
  if player.njump==0 then
-  player.jump_h = player.jump1
+  player.jump_prog = player.jump1
  else
-  player.jump_h = player.jumpxtra
+  player.jump_prog = player.jumpxtra
  end
  player.y -= 1
  player.njump += 1
@@ -166,16 +184,16 @@ function jump()
  local x2 = player.x+player.s_w*8-1
  if v_collide(x1,x2,player.y-1,0)
  then
-  player.jump_h = 0 --end jump
+  player.jump_prog = 0 --end jump
  end
  if dt > 0.005 and
-    player.jump_h > 0
+    player.jump_prog > 0
  then --do some jumping
   player.y -= 2
-  player.jump_h -= 1
+  player.jump_prog -= 1
   player.jump_tprev = time()
  end
- if(player.jump_h==0) player.is_jumping = false
+ if(player.jump_prog==0) player.is_jumping = false
 end
 
 --[[
@@ -200,6 +218,11 @@ function kill(b,e)
   player.crouch_h = player.evil_crouch_h
   player.crouch_w = player.evil_crouch_w
   player.crouch_speed = player.evil_crouch_speed
+  player.jump_s = player.evil_jump_s
+  player.jump_h = player.evil_jump_w
+  player.jump_w = player.evil_jump_h
+  player.jumph = player.evil_jumph
+  player.jumpw = player.evil_jumpw
  end
 end
 
@@ -540,11 +563,19 @@ function _update60()
   player.is_crouching = false
   player.y += player.h-player.standh
   player.x += player.w-player.standw
-  player.s = player.stand_s
-  player.s_h = player.stand_h
-  player.s_w = player.stand_w
-  player.w = player.standw
-  player.h = player.standh
+  if not v_collide(x1,x2,y2) then
+   player.s = player.jump_s
+   player.s_h = player.jump_h
+   player.s_w = player.jump_w
+   player.sw = player.jumpw
+   player.sh = player.jumph
+  else
+   player.s = player.stand_s
+   player.s_h = player.stand_h
+   player.s_w = player.stand_w
+   player.w = player.standw
+   player.h = player.standh
+  end
   player.speed = player.stand_speed
  end
  if btnp(4) and

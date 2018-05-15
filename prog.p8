@@ -6,6 +6,7 @@ __lua__
 function _init()
  -- game variables --
  prev_t = time()
+ pot_kills = 3 --total potential kills
  
  -- player dynamic variables --
  player = {}
@@ -18,6 +19,7 @@ function _init()
  player.speed = 32
  player.is_crouching = false
  player.kills = 0
+ player.is_evil = false
  
  -- player jumping --
  player.is_jumping = false
@@ -45,6 +47,14 @@ function _init()
  player.crouch_w = 1 --sprite size
  player.crouch_h = 1
  player.crouch_speed = 16
+ player.evil_stand_s = 32 --sprite
+ player.evil_stand_w = 1 --sprite size
+ player.evil_stand_h = 2
+ player.evil_stand_speed = 32
+ player.evil_crouch_s = 49 --sprite
+ player.evil_crouch_w = 1 --sprite size
+ player.evil_crouch_h = 1
+ player.evil_crouch_speed = 16
  player.can_triplej = false
 
  -- enemies --
@@ -119,6 +129,29 @@ function jump()
   player.jump_tprev = time()
  end
  if(player.jump_h==0) player.is_jumping = false
+end
+
+--[[
+what to do when player
+kills someone
+]]
+function kill(b,e)
+ kill_blast(b)
+ player.kills += 1
+ local ratio = player.kills/pot_kills
+ if not player.is_evil and
+    ratio > 0.5 then
+  player.is_evil = true
+--  player.s = player.evil_stand_s
+  player.stand_s = player.evil_stand_s
+  player.stand_h = player.evil_stand_h
+  player.stand_w = player.evil_stand_w
+  player.stand_speed = player.evil_stand_speed
+  player.crouch_s = player.evil_crouch_s
+  player.crouch_h = player.evil_crouch_h
+  player.crouch_w = player.evil_crouch_w
+  player.crouch_speed = player.evil_crouch_speed
+ end
 end
 
 --[[
@@ -335,8 +368,7 @@ function blast_hit(i)
       y2>enemy[j].y and
       y2<enemy[j].y+enemy[j].s_h*8-1
      ) then
-   player.kills += 1
-   kill_blast(i)
+   kill(i,j)
   end
  end
 end

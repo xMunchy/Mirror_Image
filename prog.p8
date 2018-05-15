@@ -17,6 +17,7 @@ function _init()
  player.flipped = false
  player.speed = 32
  player.is_crouching = false
+ player.kills = 0
  
  -- player jumping --
  player.is_jumping = false
@@ -57,8 +58,8 @@ function _init()
  blast.s = 5
  blast.s_w = 1
  blast.s_h = 1
- blast.w = 4 --size by pixels
- blast.h = 3 --size by pixels
+ blast.w = 8 --size by pixels
+ blast.h = 6 --size by pixels
  blast.speed = 2 --speed of blasts
  blast.limit = 5 --max onscreen
  blast.wait = 0 --time between blasts
@@ -188,7 +189,10 @@ function move_blasts()
       blast[i].x > 130 then
     blast[i].y=-100
    end
+   --check wall collision
    blast_hit_wall(i)
+   --check enemy collision
+   blast_hit(i)
   end--end if
  end--end for
 end
@@ -306,8 +310,26 @@ function blast_hit_wall(i)
 end
 
 --blast enemy collision
-function blast_hit()
-
+function blast_hit(i)
+ local y1 = blast[i].y
+ local y2 = blast[i].y+blast.h-1
+ --find blast x
+ local x = blast[i].x
+ if not blast[i].flipped then
+  x = x+blast.w-1
+ end
+ --detect collision
+ for j=1,#enemy do
+  if x>enemy[j].x and
+     x<enemy[j].x+enemy[j].s_w*8-1 and
+     (y1>enemy[j].y and
+      y1<enemy[j].y+enemy[j].s_h*8-1 or
+      y2>enemy[j].y and
+      y2<enemy[j].y+enemy[j].s_h*8-1
+     ) then
+   player.kills += 1
+  end
+ end
 end
 -->8
 --update and draw
@@ -379,6 +401,7 @@ function _draw()
  display_enemies()
  display_blasts()
  spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
+ print(player.kills,0,0,8)
 end
 __gfx__
 00000000010000000000000051115151010000000009800000555500004444400000444440000000000000000000000000000000000000000000000000000000

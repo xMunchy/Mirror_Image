@@ -6,7 +6,8 @@ __lua__
 function _init()
  -- game variables --
  prev_t = time()
- pot_kills = 3 --total potential kills
+ pot_kills = 0 --total potential kills
+ level = 0
  
  -- player dynamic variables --
  player = {}
@@ -21,10 +22,9 @@ function _init()
  player.speed = 32
  player.is_crouching = false
  player.hp = 10
- player.tot_kills = 0
+ player.tot_kills = 0 --total kills
  player.is_stunned = false
  player.is_evil = false
- player.lvl_killc = 0
  
  -- player jumping --
  player.is_jumping = false
@@ -74,19 +74,6 @@ function _init()
  player.stun_dur = 1
  player.knock = 10 --knockback when touch enemy
  player.kill_limit = 3 --per level
-
- -- enemies --
- enemy = {} --kind 1 ez, 2 med, 3 hard
- enemy.s = {6,7,8}
- enemy.s_w = {1,1,2} --sprite size
- enemy.s_h = {2,2,2}
- enemy.w = {7,7,12} --size by pixels
- enemy.h = {16,16,16}
- --spawn enemies
- make_enemy(1,96,72,false)
- make_enemy(2,5,88,true)
- make_enemy(3,72,104,false)
- make_enemy(1,100,104,true)
  
  -- player blasts --
  blast = {}
@@ -100,6 +87,40 @@ function _init()
  blast.wait = 0 --time between blasts
  blast.last = 0
 
+ new_level(0,0,1,3)
+end
+
+--[[
+sets up next level.
+new player position (x,y),
+lvl: level id for map.
+potk: potential kills for this map.
+reboots enemies as well.
+]]
+function new_level(x,y,lvl,potk)
+ player.x = x
+ player.y = y
+ player.s = player.stand_s
+ player.lvl_killc = 0
+ pot_kills += potk
+ -- enemies --
+ enemy = {} --kind 1 ez, 2 med, 3 hard
+ enemy.s = {6,7,8}
+ enemy.s_w = {1,1,2} --sprite size
+ enemy.s_h = {2,2,2}
+ enemy.w = {7,7,12} --size by pixels
+ enemy.h = {16,16,16}
+ spawn(lvl)
+end
+
+function spawn(lvl)
+ if lvl==1 then
+  --spawn enemies
+  make_enemy(1,96,72,false)
+  make_enemy(2,5,88,true)
+  make_enemy(3,72,104,false)
+  make_enemy(1,100,104,true)
+ end
 end
 -->8
 --player
@@ -295,13 +316,6 @@ function display_blasts()
 end
 -->8
 --enemies
-
---[[
-find dead enemies
-]]
-function clear_enemies()
- enemy={}
-end
 
 --[[
 spawn enemies

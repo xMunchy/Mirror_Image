@@ -62,6 +62,10 @@ function _init()
  enemy.s = {6,7,8}
  enemy.s_w = {1,1,2} --sprite size
  enemy.s_h = {2,2,2}
+ --spawn enemies
+ make_enemy(1,96,72,false)
+ make_enemy(2,5,88,true)
+ make_enemy(3,72,104,false)
  
  -- player blasts --
  blast = {}
@@ -137,6 +141,7 @@ kills someone
 ]]
 function kill(b,e)
  kill_blast(b)
+ kill_enemy(e)
  player.kills += 1
  local ratio = player.kills/pot_kills
  if not player.is_evil and
@@ -261,13 +266,25 @@ function make_enemy(kind,x,y,flipped)
  enemy[k].s_w = enemy.s_w[kind] --size
  enemy[k].s_h = enemy.s_h[kind]
  enemy[k].flipped = flipped
+ enemy[k].is_dead = false
+end
+
+--[[
+enemy has been killed,
+delete them
+]]
+function kill_enemy(k)
+ enemy[k].is_dead = true
 end
 
 function display_enemies()
  for i=1,#enemy do
-  spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h,enemy.flipped)
+  if not enemy[i].is_dead then
+   spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h,enemy[i].flipped)
+  end
  end
 end
+
 -->8
 --collision and physics
 
@@ -361,7 +378,8 @@ function blast_hit(i)
  end
  --detect collision
  for j=1,#enemy do
-  if x>enemy[j].x and
+  if not enemy[j].is_dead and
+     x>enemy[j].x and
      x<enemy[j].x+enemy[j].s_w*8-1 and
      (y1>enemy[j].y and
       y1<enemy[j].y+enemy[j].s_h*8-1 or
@@ -376,10 +394,6 @@ end
 --update and draw
 
 function _update60()
---spawn one enemy
- if #enemy == 0 then
-  make_enemy(1,64,104,true)
- end
  dt = time() - prev_t
  prev_t = time()
  local x1 = player.x

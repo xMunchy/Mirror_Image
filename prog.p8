@@ -21,9 +21,10 @@ function _init()
  player.speed = 32
  player.is_crouching = false
  player.hp = 10
- player.kills = 0
+ player.tot_kills = 0
  player.is_stunned = false
  player.is_evil = false
+ player.lvl_killc = 0
  
  -- player jumping --
  player.is_jumping = false
@@ -72,6 +73,7 @@ function _init()
  player.can_triplej = false
  player.stun_dur = 1
  player.knock = 10 --knockback when touch enemy
+ player.kill_limit = 3 --per level
 
  -- enemies --
  enemy = {} --kind 1 ez, 2 med, 3 hard
@@ -84,6 +86,7 @@ function _init()
  make_enemy(1,96,72,false)
  make_enemy(2,5,88,true)
  make_enemy(3,72,104,false)
+ make_enemy(1,100,104,true)
  
  -- player blasts --
  blast = {}
@@ -161,8 +164,9 @@ kills someone
 function kill(b,e)
  kill_blast(b)
  kill_enemy(e)
- player.kills += 1
- local ratio = player.kills/pot_kills
+ player.tot_kills += 1
+ player.lvl_killc += 1
+ local ratio = player.tot_kills/pot_kills
  if not player.is_evil and
     ratio > 0.5 then
   player.is_evil = true
@@ -529,7 +533,9 @@ function _update60()
   player.h = player.standh
   player.speed = player.stand_speed
  end
- if btnp(4) then
+ if btnp(4) and
+    player.lvl_killc<player.kill_limit
+    then
   shoot()
  end
  if(player.is_jumping) jump()
@@ -545,7 +551,7 @@ function _draw()
  display_blasts()
  spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
  print("hp: "..player.hp,5,5,8)
- print("kills: "..player.kills,5,15,8)
+ print("kills: "..player.tot_kills,5,15,8)
 end
 __gfx__
 00000000010000000000000051115151010000000009800005555000044444000000444440000000000000000000000000000000000000000000000000000000

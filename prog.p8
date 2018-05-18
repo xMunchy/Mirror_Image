@@ -446,14 +446,11 @@ end
 function blast_hit_wall(i)
  local y1 = blast[i].y
  local y2 = blast[i].y+blast.h-1
- local x = 0
- if blast[i].flipped then
-  x = blast[i].x+8-blast.w
- else
-  x = blast[i].x+blast.w-1
- end
+ local x1 = blast[i].x+8-blast.w
+ local x2 = x1+blast.w-1
  --collision
- if h_collide(x,y1,y2,0) then
+ if h_collide(x1,y1,y2,0) or
+    h_collide(x2,y1,y2,0) then
   kill_blast(i)
  end
 end
@@ -462,21 +459,26 @@ end
 function blast_hit(i)
  local y1 = blast[i].y
  local y2 = blast[i].y+blast.h-1
- --find blast x
- local x = blast[i].x
- if not blast[i].flipped then
-  x = x+blast.w-1
- end
+ local x1 = blast[i].x+8-blast.w
+ local x2 = x1+blast.w-1
  --detect collision
  for j=1,#enemy do
   if not enemy[j].is_dead and
-     x>=enemy[j].x and
-     x<=enemy[j].x+enemy[j].w-1 and
-     (y1>=enemy[j].y and
-      y1<=enemy[j].y+enemy[j].h-1 or
-      y2>=enemy[j].y and
-      y2<=enemy[j].y+enemy[j].h-1
-     ) then
+     (
+     x1>=enemy[j].x and
+     x1<=enemy[j].x+enemy[j].w-1
+     or
+     x2>=enemy[j].x and
+     x2<=enemy[j].x+enemy[j].w-1
+     ) and
+     (
+     y1>=enemy[j].y and
+     y1<=enemy[j].y+enemy[j].h-1
+     or
+     y2>=enemy[j].y and
+     y2<=enemy[j].y+enemy[j].h-1
+     )
+     then
    kill(i,j)
   end
  end
@@ -567,8 +569,8 @@ function _update60()
    player.s = player.jump_s
    player.s_h = player.jump_h
    player.s_w = player.jump_w
-   player.sw = player.jumpw
-   player.sh = player.jumph
+   player.w = player.jumpw
+   player.h = player.jumph
   else
    player.s = player.stand_s
    player.s_h = player.stand_h
@@ -596,7 +598,7 @@ function _draw()
  display_blasts()
  spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
  print("hp: "..player.hp,5,5,8)
- print("kills: "..player.tot_kills,5,15,8)
+ print("kills: "..player.tot_kills.."/3",5,15,8)
 end
 __gfx__
 00000000010000000000000051115151010000000009800005555000044444000000444440000000000000000000000000000000000000000000000000000000

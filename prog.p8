@@ -368,6 +368,17 @@ function kill_enemy(k)
  enemy[k].is_dead = true
 end
 
+--[[
+enemy notices where player is
+]]
+function enemy_notice(k)
+ if player.x < enemy[k].x then
+  enemy[k].flipped = false
+ else
+  enemy[k].flipped = true
+ end
+end
+
 function display_enemies()
  for i=1,#enemy do
   if not enemy[i].is_dead then
@@ -488,25 +499,31 @@ end
 does the player touch
 an enemy?
 ]]
-function touch_enemy(kb)
+function touch_enemy()
   local y1 = player.y
   local y2 = player.y+player.s_h*8-1
  --find player x
-  local x = player.x
- if not player.flipped then
-  x = x+player.w-1
- end
+  local x1 = player.x
+  local x2 = player.x+player.w-1
  --detect collision
  for j=1,#enemy do
   if not enemy[j].is_dead and
-     x>=enemy[j].x and
-     x<=enemy[j].x+enemy[j].w-1 and
-     (y1>=enemy[j].y and
-      y1<=enemy[j].y+enemy[j].h-1 or
-      y2>=enemy[j].y and
-      y2<=enemy[j].y+enemy[j].h-1
+     (
+     x1>=enemy[j].x and
+     x1<=enemy[j].x+enemy[j].w-1
+     or
+     x2>=enemy[j].x and
+     x2<=enemy[j].x+enemy[j].w-1
+     )
+     and
+     (
+     y1>=enemy[j].y and
+     y1<=enemy[j].y+enemy[j].h-1
+     or
+     y2>=enemy[j].y and
+     y2<=enemy[j].y+enemy[j].h-1
      ) then
-   player_hit(kb)
+   enemy_notice(j)
   end
  end
 end
@@ -526,14 +543,12 @@ function _update60()
     not player.is_stunned then
   player.x -= player.speed*dt
   player.flipped = true
-  touch_enemy(player.knock)
  end
  if btn(1) and not
     h_collide(x2,y1,y2-1,0) and
     not player.is_stunned then
   player.x += player.speed*dt
   player.flipped = false
-  touch_enemy(-player.knock)
  end 
  --walk into wall correction
  if btn(0) or btn(1) then
@@ -585,10 +600,13 @@ function _update60()
     then
   shoot()
  end
+
  if(player.is_jumping) jump()
+
  if(player.is_stunned) stop_stun()
  fall()
  move_blasts()
+ touch_enemy()
 end
 
 function _draw()

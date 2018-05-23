@@ -97,7 +97,7 @@ function _init()
  blast.wait = 0 --time between blasts
  blast.last = 0
 
- new_level(0,0,1,3)
+ new_level(64,0,1,3)
 end
 
 --[[
@@ -128,7 +128,7 @@ function spawn(lvl)
   --spawn enemies
   make_enemy(1,96,72,false)
   make_enemy(2,5,88,true)
-  make_enemy(3,72,104,false)
+  make_enemy(3,72,104,true)
   make_enemy(1,100,104,true)
  end
 end
@@ -368,11 +368,15 @@ function kill_enemy(k)
  enemy[k].is_dead = true
 end
 
+pmid = 0
+emid = 0
 --[[
 enemy notices where player is
 ]]
-function enemy_notice(k)
- if player.x < enemy[k].x then
+function enemy_notice(x1,x2,k)
+ pmid = (x1+x2)/2
+ emid = (2*enemy[k].x+enemy[k].w)/2
+ if pmid <= emid then
   enemy[k].flipped = false
  else
   enemy[k].flipped = true
@@ -500,30 +504,39 @@ does the player touch
 an enemy?
 ]]
 function touch_enemy()
-  local y1 = player.y
-  local y2 = player.y+player.s_h*8-1
- --find player x
   local x1 = player.x
   local x2 = player.x+player.w-1
+  local y1 = player.y
+  local y2 = player.y+player.h-1
  --detect collision
  for j=1,#enemy do
+  local x3 = enemy[j].x
+  local x4 = enemy[j].x+enemy[j].w-1
+  local y3 = enemy[j].y
+  local y4 = enemy[j].y+enemy[j].h-1
+  --determine enemy collision box
+  if enemy[j].flipped then
+   x3 += enemy[j].s_w*8-enemy[j].w
+   x4 = enemy[j].x+enemy[j].s_w*8-2
+  end
+  --collision detection
   if not enemy[j].is_dead and
      (
-     x1>=enemy[j].x and
-     x1<=enemy[j].x+enemy[j].w-1
+     x1>=x3 and
+     x1<=x4
      or
-     x2>=enemy[j].x and
-     x2<=enemy[j].x+enemy[j].w-1
+     x2>=x3 and
+     x2<=x4
      )
      and
      (
-     y1>=enemy[j].y and
-     y1<=enemy[j].y+enemy[j].h-1
+     y1>=y3 and
+     y1<=y4
      or
-     y2>=enemy[j].y and
-     y2<=enemy[j].y+enemy[j].h-1
+     y2>=y3 and
+     y2<=y4
      ) then
-   enemy_notice(j)
+   enemy_notice(x1,x2,j)
   end
  end
 end
@@ -617,6 +630,7 @@ function _draw()
  spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
  print("hp: "..player.hp,5,5,8)
  print("kills: "..player.tot_kills.."/3",5,15,8)
+ print(pmid.." "..emid,5,25,10)
 end
 __gfx__
 00000000010000000000000051115151010000000009800005555000044444000000444440000000000000000000000000000000000000000000000000000000

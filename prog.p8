@@ -472,26 +472,36 @@ end
 
 --blast enemy collision
 function blast_hit(i)
- local y1 = blast[i].y
- local y2 = blast[i].y+blast.h-1
- local x1 = blast[i].x+8-blast.w
+ local x1 = blast[i].x
  local x2 = x1+blast.w-1
- --detect collision
+ local y1 = blast[i].y
+ local y2 = y1+blast.h-1
+
  for j=1,#enemy do
+  local x3 = enemy[j].x
+  local x4 = x3+enemy[j].w-1
+  local y3 = enemy[j].y
+  local y4 = y3+enemy[j].h-1
+  --determine enemy collision box
+  if enemy[j].flipped then
+   x3 += enemy[j].s_w*8-enemy[j].w
+   x4 = enemy[j].x+enemy[j].s_w*8-2
+  end
+  --detect collision
   if not enemy[j].is_dead and
      (
-     x1>=enemy[j].x and
-     x1<=enemy[j].x+enemy[j].w-1
+     x1>=x3 and
+     x1<=x4
      or
-     x2>=enemy[j].x and
-     x2<=enemy[j].x+enemy[j].w-1
+     x2>=x3 and
+     x2<=x4
      ) and
      (
-     y1>=enemy[j].y and
-     y1<=enemy[j].y+enemy[j].h-1
+     y1>=y3 and
+     y1<=y4
      or
-     y2>=enemy[j].y and
-     y2<=enemy[j].y+enemy[j].h-1
+     y2>=y3 and
+     y2<=y4
      )
      then
    kill(i,j)
@@ -630,7 +640,6 @@ function _draw()
  spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
  print("hp: "..player.hp,5,5,8)
  print("kills: "..player.tot_kills.."/3",5,15,8)
- print(pmid.." "..emid,5,25,10)
 end
 __gfx__
 00000000010000000000000051115151010000000009800005555000044444000000444440000000000000000000000000000000000000000000000000000000

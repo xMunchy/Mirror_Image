@@ -2,89 +2,79 @@ pico-8 cartridge // http://www.pico-8.com
 version 16
 __lua__
 --init
-
 function _init()
  -- game variables --
  prev_t = time()
  pot_kills = 0 --total potential kills
  level = 0
- 
- -- player dynamic variables --
- player = {}
- player.s = 1 --sprite
- player.s_w = 1 --sprite size
- player.s_h = 2
- player.w = 8 --size by pixels
- player.h = 16
- player.x = 0 --position
- player.y = 0
- player.flipped = false
- player.speed = 32
- player.is_crouching = false
- player.hp = 10
- player.tot_kills = 0 --total kills
- player.is_stunned = false
- player.is_evil = false
- 
- -- player jumping --
- player.is_jumping = false
- player.jump_tstart = 0
- player.jump_tprev = 0
- player.jump_prog = 0 --height
-  --[[
-  which jump are you on?
-  0 = not jumping
-  1 = first jump
-  2 = double jump
-  3 = triple jump (can no longer jump)
-  ]]
- player.njump = 0
- player.jump1 = 16 --height of first jump
- player.jumpxtra = 8 --height of extra jumps
+ kill_limit = 3 --per level
 
- -- player knockback and stun --
- player.stun_start = 0
-  
  -- player static variables --
- player.stand_s = 1 --sprite
- player.stand_w = 1 --sprite size
- player.stand_h = 2
- player.standw = 8 --size by pixels
- player.standh = 16
- player.stand_speed = 32
- player.crouch_s = 18 --sprite
- player.crouch_w = 1 --sprite size
- player.crouch_h = 1
- player.crouchw = 8 --size by pixels
- player.crouchh = 8
- player.crouch_speed = 16
- player.jump_s = 5 --sprite
- player.jump_w = 1 --sprite size
- player.jump_h = 2
- player.jumpw = 8 --size by pixels
- player.jumph = 16
- player.evil_stand_s = 32 --sprite
- player.evil_stand_w = 1 --sprite size
- player.evil_stand_h = 2
- player.evil_standw = 8
- player.evil_standh = 16
- player.evil_stand_speed = 32
- player.evil_crouch_s = 33 --sprite
- player.evil_crouch_w = 1 --sprite size
- player.evil_crouch_h = 1
- player.evil_crouchw = 8
- player.evil_crouchh = 8
- player.evil_crouch_speed = 16
- player.evil_jump_s = 36 --sprite
- player.evil_jump_w = 1 --sprite size
- player.evil_jump_h = 2
- player.evil_jumpw = 8 --size by pixels
- player.evil_jumph = 16
- player.can_triplej = false
+ morality = {1,2,3}
+ --sprites = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
+ neutral_sprites = {1,3,4,2,18,5,6}
+ evil_sprites = {32,34,35,33,49,36,37}
+ good_sprites = {38,40,41,39,55,42,43}
+ sprites = {neutral_sprites,evil_sprites,good_sprites}
+ --size by 8x8 chunks
+ --size = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
+ neutral_w = {1,1,1,1,1,1,1}
+ neutral_h = {2,2,2,1,1,2,2}
+ evil_w = {1,1,1,1,1,1,1}
+ evil_h = {2,2,2,1,1,2,2}
+ good_w = {1,1,1,1,1,1,1}
+ good_h = {2,2,2,1,1,2,2}
+ w = {neutral_w,evil_w,good_w}
+ h = {neutral_h,evil_h,good_h}
+ --size by pixels
+ --size = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
+ neutral_pw = {8,8,8,8,8,8,8}
+ neutral_ph = {16,16,16,8,8,16,16}
+ evil_pw = {8,8,8,8,8,8,8}
+ evil_ph = {16,16,16,8,8,16,16}
+ good_pw = {8,8,8,8,8,8,8}
+ good_ph = {16,16,16,8,8,16,16}
+ pw = {neutral_pw,evil_pw,good_pw}
+ ph = {neutral_ph,evil_ph,good_ph}
+
+ --speed = {walking, crouching, jumping}
+ neutral_speed = {32,16,32}
+ evil_speed = {32,16,32}
+ good_speed = {32,16,32}
+ speed = {neutral_speed,evil_speed,good_speed}
+
+  -- player current variables --
+  player = {}
+  player.s = 1 --sprite
+  player.s_w = 1 --sprite size
+  player.s_h = 2
+  player.w = 8 --size by pixels
+  player.h = 16
+  player.x = 0 --position
+  player.y = 0
+  player.flipped = false
+  player.speed = 32
+  player.is_crouching = false
+  player.hp = 10
+  player.tot_kills = 0 --total kills
+  player.is_stunned = false
+  player.is_evil = false
+  player.morality = morality[3]
+  player.is_jumping = false
+  player.can_triplej = false
+
+  --jumping variables
+  player.jump_tprev = 0 --jump time
+  player.jump_prog = 0 --jump progress in remaining height
+  player.njump = 0 --first, second, or third jump
+  player.jump1 = 16 --height of first jump
+  player.jumpxtra = 8 --height of extra jumps
+
+  -- player knockback and stun --
+  player.stun_start = 0
  player.stun_dur = 1
  player.knock = 10 --knockback when touch enemy
- player.kill_limit = 3 --per level
- 
+
  -- player blasts --
  blast = {}
  blast.s = 16
@@ -96,6 +86,7 @@ function _init()
  blast.limit = 5 --max onscreen
  blast.wait = 0 --time between blasts
  blast.last = 0
+
 
  new_level(64,0,1,3)
 end
@@ -110,7 +101,7 @@ reboots enemies as well.
 function new_level(x,y,lvl,potk)
  player.x = x
  player.y = y
- player.s = player.stand_s
+ player.s = sprites[player.morality][1] --idle --player.stand_s
  player.lvl_killc = 0
  pot_kills += potk
  -- enemies --
@@ -143,11 +134,11 @@ function can_jump()
  if player.njump == 3 then
   return false
  end
- if player.njump == 2 and 
+ if player.njump == 2 and
     not player.can_triplej then
   return false
  end
- return true 
+ return true
 end
 
 --[[
@@ -157,13 +148,12 @@ a double/triple?
 ]]
 function start_jump()
  --change sprite
- player.s = player.jump_s
- player.s_h = player.jump_h
- player.s_w = player.jump_w
- player.sw = player.jumpw
- player.sh = player.jumph
+ player.s = sprites[player.morality][6] --jump --player.jump_s
+ player.s_h = h[player.morality][6] --player.jump_h
+ player.s_w = w[player.morality][6] --player.jump_w
+ player.w = pw[player.morality][6] --player.jumpw
+ player.h = ph[player.morality][6] --player.jumph
  --start jump
- player.jump_tstart = time()
  player.jump_tprev = time()
  player.is_jumping = true
  --choose jump height
@@ -181,7 +171,7 @@ function jump()
  local dt = time() - player.jump_tprev
  --check for ceiling
  local x1 = player.x
- local x2 = player.x+player.s_w*8-1
+ local x2 = player.x+player.w-1
  if v_collide(x1,x2,player.y-1,0)
  then
   player.jump_prog = 0 --end jump
@@ -206,23 +196,11 @@ function kill(b,e)
  player.tot_kills += 1
  player.lvl_killc += 1
  local ratio = player.tot_kills/pot_kills
- if not player.is_evil and
-    ratio > 0.5 then
-  player.is_evil = true
---  player.s = player.evil_stand_s
-  player.stand_s = player.evil_stand_s
-  player.stand_h = player.evil_stand_h
-  player.stand_w = player.evil_stand_w
-  player.stand_speed = player.evil_stand_speed
-  player.crouch_s = player.evil_crouch_s
-  player.crouch_h = player.evil_crouch_h
-  player.crouch_w = player.evil_crouch_w
-  player.crouch_speed = player.evil_crouch_speed
-  player.jump_s = player.evil_jump_s
-  player.jump_h = player.evil_jump_h
-  player.jump_w = player.evil_jump_w
-  player.jumph = player.evil_jumph
-  player.jumpw = player.evil_jumpw
+ dab = player.morality..morality[2]..ratio
+ if ratio > 0.5 then --make evil
+  player.morality = morality[2]
+ elseif ratio > 0.2 then --make neutral
+  player.morality = morality[1]
  end
 end
 
@@ -452,7 +430,7 @@ function v_collide(x1,x2,y,flag)
  for i=x1,x2 do
   if fget(mget(i/8,y),flag) then
    return true
-  end  
+  end
  end
  return false
 end
@@ -561,7 +539,7 @@ function _update60()
  local y1 = player.y
  local y2 = player.y+player.h
  -- walk
- if btn(0) and not 
+ if btn(0) and not
     h_collide(x1-1,y1,y2-1,0) and
     not player.is_stunned then
   player.x -= player.speed*dt
@@ -572,7 +550,7 @@ function _update60()
     not player.is_stunned then
   player.x += player.speed*dt
   player.flipped = false
- end 
+ end
  --walk into wall correction
  if btn(0) or btn(1) then
   if h_collide(x1,y1,y2-1,0) then
@@ -582,44 +560,49 @@ function _update60()
   end
  end
  -- jump
- if btnp(2) and 
+ if btnp(2) and
     can_jump() and
     not player.is_stunned then
   start_jump()
  end
  -- crouch
  if btn(3) and
-    not player.is_stunned then
+    not player.is_stunned or
+    player.is_crouching and v_collide(x1,x2,y1-1,0) then
   player.is_crouching = true
-  player.y += player.h-player.crouchh
-  player.x += player.w-player.crouchw
-  player.s = player.crouch_s
-  player.s_h = player.crouch_h
-  player.s_w = player.crouch_w
-  player.w = player.crouchw
-  player.h = player.crouchh
-  player.speed = player.crouch_speed
+  player.y += player.h-ph[player.morality][4]
+  player.x += player.w-pw[player.morality][4]
+  -- 4 = crouching
+  player.s = sprites[player.morality][4]
+  player.s_h = h[player.morality][4]
+  player.s_w = w[player.morality][4]
+  player.w = pw[player.morality][4]
+  player.h = ph[player.morality][4]
+  player.speed = speed[player.morality][2] --crouching speed
  elseif not v_collide(x1,x2,y1-1,0) then
-  player.is_crouching = false
-  player.y += player.h-player.standh
-  player.x += player.w-player.standw
-  if not v_collide(x1,x2,y2) then
-   player.s = player.jump_s
-   player.s_h = player.jump_h
-   player.s_w = player.jump_w
-   player.w = player.jumpw
-   player.h = player.jumph
+    player.is_crouching = false
+    --1 = idle
+    player.y += player.h-ph[player.morality][1] --player.standh
+    player.x += player.w-pw[player.morality][1] --player.standw
+  if not v_collide(x1,x2,y2) then --faling
+   --6 = jumping/falling
+   player.s = sprites[player.morality][6] --player.jump_s
+   player.s_h = h[player.morality][6] --player.jump_h
+   player.s_w = w[player.morality][6] --player.jump_w
+   player.w = pw[player.morality][6] --player.jumpw
+   player.h = ph[player.morality][6] --player.jumph
   else
-   player.s = player.stand_s
-   player.s_h = player.stand_h
-   player.s_w = player.stand_w
-   player.w = player.standw
-   player.h = player.standh
+   --1 = idle
+   player.s = sprites[player.morality][1] --player.stand_s
+   player.s_h = h[player.morality][1] --player.stand_h
+   player.s_w = w[player.morality][1] --player.stand_w
+   player.w = pw[player.morality][1] --player.standw
+   player.h = ph[player.morality][1] --player.standh
   end
-  player.speed = player.stand_speed
+  player.speed = speed[player.morality][1] --walking speed
  end
  if btnp(4) and
-    player.lvl_killc<player.kill_limit
+    player.lvl_killc<kill_limit
     then
   shoot()
  end
@@ -640,6 +623,9 @@ function _draw()
  spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
  print("hp: "..player.hp,5,5,8)
  print("kills: "..player.tot_kills.."/3",5,15,8)
+ print(player.h, 5, 25,10)
+ print("morality "..player.morality,5,35,10)
+ print(dab,5,45,10)
 end
 __gfx__
 00000000010000000101111001000000010000000110001001000000005555000044444000000444440000000055550000444440000000444440000000000000

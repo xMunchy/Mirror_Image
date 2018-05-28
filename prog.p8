@@ -101,6 +101,8 @@ function _init()
  blast.wait = 0.5 --time between blasts
  blast.prevt = 0
 
+ --paths for enemies to travel
+ path1 = {120,-120}
 
  new_level(64,0,1,3)
 end
@@ -125,17 +127,19 @@ function new_level(x,y,lvl,potk)
  enemy.s_h = {2,2,2}
  enemy.w = {7,7,12} --size by pixels
  enemy.h = {16,16,16}
- enemy.speed = {32,32,60}
+ enemy.speed = {16,32,60}
  enemy.range = {40,60,60}
+ enemy.shoot_h = {8,8}
  enemy.surprised = 46
  enemy.reload = 2 --time between shots
- enemy.shoot_speed = 16
+ enemy.shoot_speed = 20
  enemy.bullet = {}
  enemy.bullet.s = 15 --sprite
  enemy.bullet.s_h = 1 --size
  enemy.bullet.s_w = 1
  enemy.bullet.h = 2 --size by pixels
  enemy.bullet.w = 2
+ enemy.wait = 2 --wait between path steps and after seeing player
  --[[ enemy attributes
  enemy[k].x
  enemy[k].y
@@ -151,6 +155,10 @@ function new_level(x,y,lvl,potk)
  enemy[k].sees_you, bool, sees player
  enemy[k].range, vision range
  enemy[k].prev_shot, for reload time
+ enemy[k].path, path to move along
+ enemy[k].path_prog, progress of movement in path
+ enemy[k].wait_start
+ enemy[k].waiting
  enemy.bullet[i].x
  enemy.bullet[i].y
  enemy.bullet[i].direction
@@ -159,13 +167,13 @@ function new_level(x,y,lvl,potk)
  spawn(lvl) --spawn enemies
 end
 
+--[[
+spawn enemies for each level
+]]
 function spawn(lvl)
  if lvl==1 then
   --spawn enemies
-  make_enemy(1,96,56,false)
-  make_enemy(2,5,72,true)
-  make_enemy(3,72,88,true)
-  make_enemy(1,100,88,true)
+  make_enemy(1,0,0,false,path1)
  end
 end
 -->8
@@ -425,7 +433,7 @@ spawn enemies
 kind: enemy type
 x and y: position
 ]]
-function make_enemy(kind,x,y,flipped)
+function make_enemy(kind,x,y,flipped,path)
   local k = #enemy+1
   enemy[k] = {}
   enemy[k].x = x
@@ -436,12 +444,58 @@ function make_enemy(kind,x,y,flipped)
   enemy[k].s_h = enemy.s_h[kind]
   enemy[k].w = enemy.w[kind]
   enemy[k].h = enemy.h[kind]
+  enemy[k].prev_t = time()
   enemy[k].flipped = flipped
   enemy[k].is_dead = false
   enemy[k].speed = enemy.speed[kind]
   enemy[k].sees_you = false
   enemy[k].range = enemy.range[kind]
+  enemy[k].shoot_h = enemy.shoot_h[kind]
   enemy[k].prev_shot = 0
+  enemy[k].path = path
+  enemy[k].path_prog = 1
+  enemy[k].prev_x = enemy[k].x
+  enemy[k].prev_y = enemy[k].y
+  enemy[k].waiting = false
+  enemy[k].is_jumping = false
+end
+
+--[[
+move enemy along a predetermined path.
+k = enemy index
+]]
+function move_enemy()
+  for i=1,#enemy do
+    local dt = time() - enemy[i].prev_t
+    enemy[i].prev_t = time()
+    if not enemy[i].sees_you and
+       not enemy[i].waiting then
+      local p = enemy[i].path_prog
+      local xdirection = 0
+      if enemy[i].path[p] < 0 then --facing left
+        enemy[i].flipped = false
+        xdirection = -1
+      else --facing right
+        enemy[i].flipped = true
+        xdirection = 1
+      end
+      local front = enemy[i].x-1
+      local y1 = enemy[i].y
+      local y2 = y1+enemy[i].h-1
+      if(enemy[i].flipped) front=enemy[i].x+enemy[i].w
+      if(not h_collide(front,y1,y2)) enemy[i].x += xdirection*enemy[i].speed*dt
+      if abs(enemy[i].x-enemy[i].prev_x)>=abs(enemy[i].path[p]) or
+         h_collide(front,y1,y2) then
+        enemy[i].wait_start = time()
+        enemy[i].waiting = true
+        enemy[i].path_prog = p % #enemy[i].path+1
+        enemy[i].prev_x = enemy[i].x
+      end
+    elseif enemy[i].waiting and
+        time()-enemy[i].wait_start>=enemy.wait then
+        enemy[i].waiting = false
+    end
+  end
 end
 
 --[[
@@ -459,7 +513,6 @@ enemy notices where player is
 ]]
 function enemy_notice(x1,x2,k)
   enemy[k].sees_you = true
-  spr(enemy.surprised,enemy[k].x,enemy[k].y-10) --! exclamation mark
   --if touched, face player
   pmid = (x1+x2)/2
   emid = (2*enemy[k].x+enemy[k].w)/2
@@ -470,6 +523,8 @@ function enemy_notice(x1,x2,k)
   end
   --shoot at player
   if enemy[k].kind != 3 then
+    enemy[k].wait_start = time()
+    enemy[k].waiting = true
     enemy_shoot(k)
   end
 end
@@ -491,7 +546,7 @@ function enemy_shoot(k)
   end
   --start shot
   enemy.bullet[valid] = {}
-  enemy.bullet[valid].y = enemy[k].y+enemy[k].h/2
+  enemy.bullet[valid].y = enemy[k].y+enemy[k].shoot_h
   enemy.bullet[valid].prevt = time()
   if enemy[k].flipped then
     enemy.bullet[valid].x = enemy[k].x+enemy[k].w
@@ -568,6 +623,11 @@ function enemy_check_range()
       if is_inside(x1,x2,y1,y2,box1,box2,y3,y4) then
         enemy_notice(x1,x2,i)
       end
+      if enemy[i].sees_you and enemy[i].waiting then
+        spr(enemy.surprised,enemy[i].x,enemy[i].y-10) --! exclamation mark
+      else
+        enemy[i].sees_you = false
+      end
     end
   end
 end
@@ -579,17 +639,31 @@ make player fall
 simulates gravity
 ]]
 function fall()
- local y = player.y+player.h
- local x1 = player.x
- local x2 = player.x+player.w-1
- if v_collide(x1,x2,y,0) then
-  player.njump = 0
-  if v_collide(x1,x2,y-1,0) then
-   player.y -= 1
+  --make player fall
+  local y = player.y+player.h
+  local x1 = player.x
+  local x2 = player.x+player.w-1
+  if v_collide(x1,x2,y,0) then
+    player.njump = 0
+    if v_collide(x1,x2,y-0.5,0) then
+      player.y = flr(player.y-0.5)
+    end
+  else
+    if(not player.is_jumping) player.y += 1.5
   end
- else
-  if(not player.is_jumping) player.y += 1.5
- end
+  --make enemies fall
+  for i=1,#enemy do
+    local y = enemy[i].y+enemy[i].h
+    local x1 = enemy[i].x
+    local x2 = enemy[i].x+enemy[i].w-1
+    if v_collide(x1,x2,y,0) then
+      if v_collide(x1,x2,y-0.5,0) then
+        enemy[i].y = flr(enemy[i].y-0.5)
+      end
+    else
+      if(not enemy[i].is_jumping) enemy[i].y += 1.5
+    end
+  end
 end
 
 --[[
@@ -818,6 +892,7 @@ function _update60()
    fall()
    move_blasts()
    enemy_move_bullet()
+   move_enemy()
    touch_enemy()
    if(player.is_hit) player_flash()
    if player.hp<=0 then
@@ -853,14 +928,14 @@ __gfx__
 0000000010111100101444411011110010111110101111011011111000ffff500044444000000a44a400000000ffff5000444440000000484440000055000000
 00700700014444100104747001444410014444010144440001444401005f5f00006446400000044444000000008f8f0000844840000000444440000000000000
 0007700010474701000444401047470110474700014747001047470000ffff0000444440000000044000000000ffff0000444440000000004400000000000000
-000770000044440000033330004444000044440010444400004444000000f0000000445000000044440000000000f00000004455000000004444400000000000
+000770000044440000033330004444000044440010444400004444000000f0000000445500000044440000000000f00000004455000000004444400000000000
 00700700000400000003630000040000000400000334330000040000004444400055555500000444444440000044444000555555000000044440040000000000
 00000000003330000000555000333300033330003333303003333337040444040555555500004444440040000404440405555555888884444440400000000000
-00000000033333000065006003333030303333003033300630333000040444040550556688884444400080005555555f05505556888880844444000000000000
+00000000033333000065006003333030303333003033300630333000040444040550555688884444400080005555555f05505556888880844444000000000000
 070550003033303001011110303330030363306060333000033630005555555f66666666888044444888800000f655f066666666888800844444000000000000
-0005705030333030101444410363300600333000004440000033300000f655f06446644588805555588880000004450064466644888800855555000000000000
-0560507560444060010474700044400000444000005555000044400000011500001144110000555558880000000111000011144100000005555500000ddd0000
-605000060055500000044440005550000055500000500500005550000001111000111611000055000550000000111110001111610000000550055000dccccddd
+0005705030333030101444410363300600333000004440000033300000f655f06446664488805555588880000004450064466644888800855555000000000000
+0560507560444060010474700044400000444000005555000044400000011500001114410000555558880000000111000011144100000005555500000ddd0000
+605000060055500000044440005550000055500000500500005550000001111000111161000055000550000000111110001111610000000550055000dccccddd
 0607606000505000003333360050500000500500655005000050500000110010001101110005500000550000001000100011011100000055000555000d77dd00
 000507000050500000603300655050000050600060000660005005000010000100110111000800000080000001000001001101110000008000000800007d0000
 00000000005050000000555060005000050060000000000065000500001000010011011100550000055000000100000100110111000055000000055000700000

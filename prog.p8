@@ -48,6 +48,8 @@ function _init()
   health_sp = {44,60}
   --blast_sp = {full,empty}
   blast_sp = {45,61}
+  --stealth = {neutral,evil,good}
+  stealth = {0,-10,10}
   -- player current variables --
   player.is_dead = false
   player.morality = morality[3]
@@ -58,14 +60,22 @@ function _init()
   player.h = ph[player.morality][1]
   player.x = 0 --position
   player.y = 0
+  player.hp = player.max_hp
   player.flipped = false
   player.speed = speed[1] --neutral speed
+  player.stealth = stealth[3]
   player.is_crouching = false
-  player.hp = player.max_hp
   player.tot_kills = 0 --total kills
   player.is_stunned = false
   player.is_jumping = false
   player.can_triplej = false
+  --got hit, do flashing animation
+  player.is_hit = false
+  player.hit_start = 0
+  player.hit_prevt = 0 --time flashes
+  player.hit_dur = 1 --length of flashing
+  player.hit_s = 47 --sprite to flash to
+  player.hit_prev_s = player.s --most recent sprite
 
   --jumping variables
   player.jump_tprev = 0 --jump time
@@ -183,7 +193,7 @@ a double/triple?
 ]]
 function start_jump()
  --change sprite
- player.s = sprites[player.morality][6] --jump --player.jump_s
+ if(not player.is_hit) player.s = sprites[player.morality][6] --jump --player.jump_s
  player.s_h = h[player.morality][6] --player.jump_h
  player.s_w = w[player.morality][6] --player.jump_w
  player.w = pw[player.morality][6] --player.jumpw
@@ -234,8 +244,10 @@ function kill(b,e)
  dab = player.morality..morality[2]..ratio
  if ratio > 0.5 then --make evil
   player.morality = morality[2]
+  player.stealth = stealth[2]
  elseif ratio > 0.2 then --make neutral
   player.morality = morality[1]
+  player.stealth = stealth[1]
  end
 end
 
@@ -244,11 +256,36 @@ player touched enemy!
 knockback and stun.
 ]]
 function player_hit()
-player.hp -= 1
+  sfx(0)
+  if(not player.is_hit) player.hit_start = time()
+  player.is_hit = true
+  player.hit_prev_s = player.s
+  player.hp -= 1
 --player.is_stunned = true
 --player.stun_start = time()
 end
 
+--[[
+got hit, flash animation
+]]
+function player_flash()
+  local dt = time() - player.hit_prevt
+  if dt>=0.2 then
+    player.hit_prevt = time()
+    if player.s==player.hit_s then
+      player.s = player.hit_prev_s
+    else
+      player.s = player.hit_s
+    end
+  end
+  if time()-player.hit_start >= player.hit_dur then
+    player.is_hit = false
+  end
+end
+
+--[[
+player died, do this:
+]]
 function player_die()
   player.is_dead = true
 end
@@ -485,6 +522,8 @@ function enemy_move_bullet()
     if is_inside(x1,x2,y1,y2,x3,x4,y3,y4) then
       kill_bullet(i)
       player_hit()
+    elseif h_collide(x1,y1,y2) or h_collide(x2,y1,y2) then
+      kill_bullet(i)
     end
   end--end for
 end
@@ -517,11 +556,11 @@ function enemy_check_range()
       local y3 = enemy[i].y
       local y4 = y3+enemy[i].h-1
       --determine x values of vision box
-      local box1 = enemy[i].x-enemy[i].range
+      local box1 = enemy[i].x-enemy[i].range+player.stealth
       local box2 = enemy[i].x+enemy[i].w/2
       if enemy[i].flipped then
         box1 = enemy[i].x+0.5*enemy[i].w
-        box2 = box1+enemy[i].range
+        box2 = box1+enemy[i].range-player.stealth
       end
       --rect(box1,y3,box2,y4,5)
       if is_inside(x1,x2,y1,y2,box1,box2,y3,y4) then
@@ -733,7 +772,8 @@ function _update60()
      player.y += player.h-ph[player.morality][4]
      player.x += player.w-pw[player.morality][4]
      -- 4 = crouching
-     player.s = sprites[player.morality][4]
+     if(not player.is_hit) player.s = sprites[player.morality][4]
+     player.hit_prev_s = sprites[player.morality][4]
      player.s_h = h[player.morality][4]
      player.s_w = w[player.morality][4]
      player.w = pw[player.morality][4]
@@ -742,22 +782,24 @@ function _update60()
     elseif not v_collide(x1,x2,y1-1,0) then
        player.is_crouching = false
        --1 = idle
-       player.y += player.h-ph[player.morality][1] --player.standh
-       player.x += player.w-pw[player.morality][1] --player.standw
+       player.y += player.h-ph[player.morality][1]
+       player.x += player.w-pw[player.morality][1]
      if not v_collide(x1,x2,y2) then --faling
       --6 = jumping/falling
-      player.s = sprites[player.morality][6] --player.jump_s
-      player.s_h = h[player.morality][6] --player.jump_h
-      player.s_w = w[player.morality][6] --player.jump_w
-      player.w = pw[player.morality][6] --player.jumpw
-      player.h = ph[player.morality][6] --player.jumph
+      if(not player.is_hit) player.s = sprites[player.morality][6]
+      player.prev_s = sprites[player.morality][6]
+      player.s_h = h[player.morality][6]
+      player.s_w = w[player.morality][6]
+      player.w = pw[player.morality][6]
+      player.h = ph[player.morality][6]
      else
       --1 = idle
-      player.s = sprites[player.morality][1] --player.stand_s
-      player.s_h = h[player.morality][1] --player.stand_h
-      player.s_w = w[player.morality][1] --player.stand_w
-      player.w = pw[player.morality][1] --player.standw
-      player.h = ph[player.morality][1] --player.standh
+      if(not player.is_hit) player.s = sprites[player.morality][1]
+      player.hit_prev_s = sprites[player.morality][1]
+      player.s_h = h[player.morality][1]
+      player.s_w = w[player.morality][1]
+      player.w = pw[player.morality][1]
+      player.h = ph[player.morality][1]
      end
      player.speed = speed[player.morality][1] --walking speed
     end
@@ -775,6 +817,7 @@ function _update60()
    move_blasts()
    enemy_move_bullet()
    touch_enemy()
+   if(player.is_hit) player_flash()
    if player.hp<=0 then
      player_die()
    end
@@ -880,3 +923,5 @@ __map__
 4040404040404040404040404040404000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 5050505050505050505050505050505000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 6060606060606060606060606060606000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+__sfx__
+0005000022550215501f5501d5501c550000000000000000000003800038000380003800037000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

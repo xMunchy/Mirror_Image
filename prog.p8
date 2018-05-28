@@ -10,6 +10,8 @@ function _init()
  kill_limit = 3 --per level
 
  -- player static variables --
+ player = {}
+ player.max_hp = 10
  morality = {1,2,3}
  --sprites = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
  neutral_sprites = {1,3,4,2,18,5,6}
@@ -36,20 +38,22 @@ function _init()
  good_ph = {16,16,16,8,8,16,16}
  pw = {neutral_pw,evil_pw,good_pw}
  ph = {neutral_ph,evil_ph,good_ph}
-
  --speed = {walking, crouching, jumping}
  neutral_speed = {32,16,32}
  evil_speed = {32,16,32}
  good_speed = {32,16,32}
  speed = {neutral_speed,evil_speed,good_speed}
-
+ --attribute sprites
+ --health_sp = {full,empty}
+ health_sp = {44,60}
+ --blast_sp = {full,empty}
+ blast_sp = {45,61}
   -- player current variables --
-  player = {}
   player.s = 1 --sprite
   player.s_w = 1 --sprite size
   player.s_h = 2
   player.w = 8 --size by pixels
-  player.h = 16
+  player.h = player.max_hp
   player.x = 0 --position
   player.y = 0
   player.flipped = false
@@ -211,8 +215,8 @@ knockback and stun.
 function player_hit(kb)
 player.x += kb
 player.hp -= 1
-player.is_stunned = true
-player.stun_start = time()
+--player.is_stunned = true
+--player.stun_start = time()
 end
 
 --[[
@@ -314,6 +318,28 @@ function display_blasts()
  for i=1,#blast do
   spr(blast.s,blast[i].x,blast[i].y,blast.s_w,blast.s_h,blast[i].flipped)
  end
+end
+
+function display_hp()
+  for i=1,player.max_hp do
+    if i<= player.hp then
+      spr(health_sp[1],(i-1)*8,5)
+    else
+      spr(health_sp[2],(i-1)*8,5)
+    end
+  end
+end
+
+function display_blimit()
+  for i=1,blast.limit do
+    if (not blast[i] or --if blast[i] doesn't exist
+       blast[i].y < 0) and
+       player.lvl_killc<kill_limit then --blast[i] is done
+      spr(blast_sp[1],(blast.limit-i)*8,15)
+    else
+      spr(blast_sp[2],(blast.limit-i)*8,15)
+    end
+  end
 end
 -->8
 --enemies
@@ -601,6 +627,7 @@ function _update60()
   end
   player.speed = speed[player.morality][1] --walking speed
  end
+ --shoot
  if btnp(4) and
     player.lvl_killc<kill_limit
     then
@@ -620,12 +647,10 @@ function _draw()
  map(0,0,0,0)
  display_enemies()
  display_blasts()
+ display_hp()
+ display_blimit()
  spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
- print("hp: "..player.hp,5,5,8)
- print("kills: "..player.tot_kills.."/3",5,15,8)
- print(player.h, 5, 25,10)
- print("morality "..player.morality,5,35,10)
- print(dab,5,45,10)
+ print("kills: "..player.tot_kills.."/3",5,25,8)
 end
 __gfx__
 00000000010000000101111001000000010000000110001001000000005555000044444000000444440000000055550000444440000000444440000000000000

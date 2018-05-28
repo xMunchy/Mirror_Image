@@ -193,11 +193,13 @@ a double/triple?
 ]]
 function start_jump()
  --change sprite
- if(not player.is_hit) player.s = sprites[player.morality][6] --jump --player.jump_s
- player.s_h = h[player.morality][6] --player.jump_h
- player.s_w = w[player.morality][6] --player.jump_w
- player.w = pw[player.morality][6] --player.jumpw
- player.h = ph[player.morality][6] --player.jumph
+ -- 6 = jump
+ if(not player.is_hit) player.s = sprites[player.morality][6]
+ player.hit_prev_s = sprites[player.morality][6]
+ player.s_h = h[player.morality][6]
+ player.s_w = w[player.morality][6]
+ player.w = pw[player.morality][6]
+ player.h = ph[player.morality][6]
  --start jump
  player.jump_tprev = time()
  player.is_jumping = true
@@ -787,7 +789,7 @@ function _update60()
      if not v_collide(x1,x2,y2) then --faling
       --6 = jumping/falling
       if(not player.is_hit) player.s = sprites[player.morality][6]
-      player.prev_s = sprites[player.morality][6]
+      player.hit_prev_s = sprites[player.morality][6]
       player.s_h = h[player.morality][6]
       player.s_w = w[player.morality][6]
       player.w = pw[player.morality][6]

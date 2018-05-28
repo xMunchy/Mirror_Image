@@ -3,67 +3,66 @@ version 16
 __lua__
 --init
 function _init()
- -- game variables --
- prev_t = time()
- pot_kills = 0 --total potential kills
- level = 0
- kill_limit = 3 --per level
+  -- game variables --
+  prev_t = time()
+  pot_kills = 0 --total potential kills
+  level = 0
+  kill_limit = 3 --per level
 
- -- player static variables --
- player = {}
- player.max_hp = 10
- morality = {1,2,3}
- --sprites = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
- neutral_sprites = {1,3,4,2,18,5,6}
- evil_sprites = {32,34,35,33,49,36,37}
- good_sprites = {38,40,41,39,55,42,43}
- sprites = {neutral_sprites,evil_sprites,good_sprites}
- --size by 8x8 chunks
- --size = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
- neutral_w = {1,1,1,1,1,1,1}
- neutral_h = {2,2,2,1,1,2,2}
- evil_w = {1,1,1,1,1,1,1}
- evil_h = {2,2,2,1,1,2,2}
- good_w = {1,1,1,1,1,1,1}
- good_h = {2,2,2,1,1,2,2}
- w = {neutral_w,evil_w,good_w}
- h = {neutral_h,evil_h,good_h}
- --size by pixels
- --size = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
- neutral_pw = {8,8,8,8,8,8,8}
- neutral_ph = {16,16,16,8,8,16,16}
- evil_pw = {8,8,8,8,8,8,8}
- evil_ph = {16,16,16,8,8,16,16}
- good_pw = {8,8,8,8,8,8,8}
- good_ph = {16,16,16,8,8,16,16}
- pw = {neutral_pw,evil_pw,good_pw}
- ph = {neutral_ph,evil_ph,good_ph}
- --speed = {walking, crouching, jumping}
- neutral_speed = {32,16,32}
- evil_speed = {32,16,32}
- good_speed = {32,16,32}
- speed = {neutral_speed,evil_speed,good_speed}
- --attribute sprites
- --health_sp = {full,empty}
- health_sp = {44,60}
- --blast_sp = {full,empty}
- blast_sp = {45,61}
+  -- player static variables --
+  player = {}
+  player.max_hp = 10
+  morality = {1,2,3}
+  --sprites = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
+  neutral_sprites = {1,3,4,2,18,5,6}
+  evil_sprites = {32,34,35,33,49,36,37}
+  good_sprites = {38,40,41,39,55,42,43}
+  sprites = {neutral_sprites,evil_sprites,good_sprites}
+  --size by 8x8 chunks
+  --size = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
+  neutral_w = {1,1,1,1,1,1,1}
+  neutral_h = {2,2,2,1,1,2,2}
+  evil_w = {1,1,1,1,1,1,1}
+  evil_h = {2,2,2,1,1,2,2}
+  good_w = {1,1,1,1,1,1,1}
+  good_h = {2,2,2,1,1,2,2}
+  w = {neutral_w,evil_w,good_w}
+  h = {neutral_h,evil_h,good_h}
+  --size by pixels
+  --size = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
+  neutral_pw = {8,8,8,8,8,8,8}
+  neutral_ph = {16,16,16,8,8,16,16}
+  evil_pw = {8,8,8,8,8,8,8}
+  evil_ph = {16,16,16,8,8,16,16}
+  good_pw = {8,8,8,8,8,8,8}
+  good_ph = {16,16,16,8,8,16,16}
+  pw = {neutral_pw,evil_pw,good_pw}
+  ph = {neutral_ph,evil_ph,good_ph}
+  --speed = {walking, crouching, jumping}
+  neutral_speed = {32,16,32}
+  evil_speed = {32,16,32}
+  good_speed = {32,16,32}
+  speed = {neutral_speed,evil_speed,good_speed}
+  --attribute sprites
+  --health_sp = {full,empty}
+  health_sp = {44,60}
+  --blast_sp = {full,empty}
+  blast_sp = {45,61}
   -- player current variables --
-  player.s = 1 --sprite
-  player.s_w = 1 --sprite size
-  player.s_h = 2
-  player.w = 8 --size by pixels
-  player.h = player.max_hp
+  player.morality = morality[3]
+  player.s = sprites[player.morality][1] --sprite, idle
+  player.s_w = w[player.morality][1] --sprite size
+  player.s_h = h[player.morality][1]
+  player.w = pw[player.morality][1] --size by pixels
+  player.h = ph[player.morality][1]
   player.x = 0 --position
   player.y = 0
   player.flipped = false
-  player.speed = 32
+  player.speed = speed[1] --neutral speed
   player.is_crouching = false
-  player.hp = 10
+  player.hp = player.max_hp
   player.tot_kills = 0 --total kills
   player.is_stunned = false
-  player.is_evil = false
-  player.morality = morality[3]
   player.is_jumping = false
   player.can_triplej = false
 
@@ -81,15 +80,15 @@ function _init()
 
  -- player blasts --
  blast = {}
- blast.s = 16
- blast.s_w = 1
+ blast.s = 16 --sprite
+ blast.s_w = 1 --size
  blast.s_h = 1
  blast.w = 8 --size by pixels
  blast.h = 6 --size by pixels
  blast.speed = 2 --speed of blasts
  blast.limit = 5 --max onscreen
- blast.wait = 0 --time between blasts
- blast.last = 0
+ blast.wait = 0.5 --time between blasts
+ blast.prevt = 0
 
 
  new_level(64,0,1,3)
@@ -110,12 +109,43 @@ function new_level(x,y,lvl,potk)
  pot_kills += potk
  -- enemies --
  enemy = {} --kind 1 ez, 2 med, 3 hard
- enemy.s = {7,8,9}
+ enemy.s = {8,7,9}
  enemy.s_w = {1,1,2} --sprite size
  enemy.s_h = {2,2,2}
  enemy.w = {7,7,12} --size by pixels
  enemy.h = {16,16,16}
- spawn(lvl)
+ enemy.speed = {32,32,60}
+ enemy.range = {40,60,60}
+ enemy.surprised = 46
+ enemy.reload = 2 --time between shots
+ enemy.shoot_speed = 16
+ enemy.bullet = {}
+ enemy.bullet.s = 15 --sprite
+ enemy.bullet.s_h = 1 --size
+ enemy.bullet.s_w = 1
+ enemy.bullet.h = 2 --size by pixels
+ enemy.bullet.w = 2
+ --[[ enemy attributes
+ enemy[k].x
+ enemy[k].y
+ enemy[k].kind, 1 = easy, 2 = medium, 3 = hard
+ enemy[k].s, sprite
+ enemy[k].s_w, size
+ enemy[k].s_h
+ enemy[k].w, size by pixels
+ enemy[k].h
+ enemy[k].flipped, bool
+ enemy[k].is_dead, bool
+ enemy[k].speed
+ enemy[k].sees_you, bool, sees player
+ enemy[k].range, vision range
+ enemy[k].prev_shot, for reload time
+ enemy.bullet[i].x
+ enemy.bullet[i].y
+ enemy.bullet[i].direction
+ enemy.bullet[i].prevt, for moving bullet
+ ]]
+ spawn(lvl) --spawn enemies
 end
 
 function spawn(lvl)
@@ -239,7 +269,7 @@ criteria:
    -time between blasts
 ]]
 function get_valid_blast()
- local dt = time() - blast.last
+ local dt = time() - blast.prevt
  if dt < blast.wait then
   return 0
  end
@@ -261,7 +291,7 @@ direction the player is facing
 function shoot()
  local k = get_valid_blast()
  if k != 0 then
-  blast.last = time() --time at latest shot
+  blast.prevt = time() --time at latest shot
   blast[k] = {}
   --find y of blast
   if player.is_crouching then
@@ -350,18 +380,22 @@ kind: enemy type
 x and y: position
 ]]
 function make_enemy(kind,x,y,flipped)
- local k = #enemy+1
- enemy[k] = {}
- enemy[k].x = x
- enemy[k].y = y
- enemy[k].kind = kind --1 ez, 2 med, 3 hard
- enemy[k].s = enemy.s[kind] --sprite
- enemy[k].s_w = enemy.s_w[kind] --size
- enemy[k].s_h = enemy.s_h[kind]
- enemy[k].w = enemy.w[kind]
- enemy[k].h = enemy.h[kind]
- enemy[k].flipped = flipped
- enemy[k].is_dead = false
+  local k = #enemy+1
+  enemy[k] = {}
+  enemy[k].x = x
+  enemy[k].y = y
+  enemy[k].kind = kind --1 ez, 2 med, 3 hard
+  enemy[k].s = enemy.s[kind] --sprite
+  enemy[k].s_w = enemy.s_w[kind] --size
+  enemy[k].s_h = enemy.s_h[kind]
+  enemy[k].w = enemy.w[kind]
+  enemy[k].h = enemy.h[kind]
+  enemy[k].flipped = flipped
+  enemy[k].is_dead = false
+  enemy[k].speed = enemy.speed[kind]
+  enemy[k].sees_you = false
+  enemy[k].range = enemy.range[kind]
+  enemy[k].prev_shot = 0
 end
 
 --[[
@@ -378,23 +412,98 @@ emid = 0
 enemy notices where player is
 ]]
 function enemy_notice(x1,x2,k)
- pmid = (x1+x2)/2
- emid = (2*enemy[k].x+enemy[k].w)/2
- if pmid <= emid then
-  enemy[k].flipped = false
- else
-  enemy[k].flipped = true
- end
+  enemy[k].sees_you = true
+  spr(enemy.surprised,enemy[k].x,enemy[k].y-10) --! exclamation mark
+  --if touched, face player
+  pmid = (x1+x2)/2
+  emid = (2*enemy[k].x+enemy[k].w)/2
+  if pmid <= emid then
+    enemy[k].flipped = false
+  else
+    enemy[k].flipped = true
+  end
+  --shoot at player
+  enemy_shoot(k)
+end
+
+function enemy_shoot(k)
+  local dt = time() - enemy[k].prev_shot
+  if dt < enemy.reload then return 0 end
+  enemy[k].prev_shot = time()
+  --find valid bullet
+  local valid = 0
+  for i=1,#enemy.bullet do
+    if enemy.bullet[i].y < 0 then
+      valid = i
+      break
+    end
+  end
+  if valid==0 then
+    valid = #enemy.bullet+1
+  end
+  --start shot
+  enemy.bullet[valid] = {}
+  enemy.bullet[valid].y = enemy[k].y+enemy[k].h/2
+  enemy.bullet[valid].prevt = time()
+  if enemy[k].flipped then
+    enemy.bullet[valid].x = enemy[k].x+enemy[k].w
+    enemy.bullet[valid].direction = 1
+  else
+    enemy.bullet[valid].x = enemy[k].x
+    enemy.bullet[valid].direction = -1
+  end
+end
+
+function enemy_move_bullet()
+  for i=1,#enemy.bullet do
+    if not (enemy.bullet[i].y < 0) then
+      local dt = time() - enemy.bullet[i].prevt
+      enemy.bullet[i].prevt = time()
+      enemy.bullet[i].x += enemy.bullet[i].direction*enemy.shoot_speed*dt
+      if enemy.bullet[i].x > 130 or enemy.bullet[i].x < -4 then
+        enemy.bullet[i].y = -100
+      end
+    end
+  end
+end
+
+function display_enemy_bullet()
+  for i=1,#enemy.bullet do
+    spr(enemy.bullet.s,enemy.bullet[i].x,enemy.bullet[i].y,enemy.bullet.s_h,enemy.bullet.s_w)
+  end
 end
 
 function display_enemies()
- for i=1,#enemy do
-  if not enemy[i].is_dead then
-   spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h,enemy[i].flipped)
+  for i=1,#enemy do
+    if not enemy[i].is_dead then
+      spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h,enemy[i].flipped)
+    end
   end
- end
 end
 
+function enemy_check_range()
+  local x1 = player.x
+  local x2 = player.x+player.w-1
+  local y1 = player.y
+  local y2 = player.y+player.h-1
+  for i=1,#enemy do
+    if not enemy[i].is_dead then
+      local y3 = enemy[i].y
+      local y4 = y3+enemy[i].h-1
+      --determine x values of vision box
+      local box1 = enemy[i].x-enemy[i].range
+      local box2 = enemy[i].x+enemy[i].w/2
+      if enemy[i].flipped then
+        box1 = enemy[i].x+0.5*enemy[i].w
+        box2 = box1+enemy[i].range
+      end
+      --rect(box1,y3,box2,y4,5)
+      if is_inside(x1,x2,y1,y2,box1,box2,y3,y4) then
+        enemy_notice(x1,x2,i)
+      end
+    end
+  end
+end
 -->8
 --collision and physics
 
@@ -493,24 +602,36 @@ function blast_hit(i)
   end
   --detect collision
   if not enemy[j].is_dead and
-     (
-     x1>=x3 and
-     x1<=x4
-     or
-     x2>=x3 and
-     x2<=x4
-     ) and
-     (
-     y1>=y3 and
-     y1<=y4
-     or
-     y2>=y3 and
-     y2<=y4
-     )
+     is_inside(x1,x2,y1,y2,x3,x4,y3,y4)
      then
    kill(i,j)
   end
  end
+end
+
+--[[
+if object 1 with x1,x2,y1,y2 is inside object 2 with x3,x4,y3,y4
+]]
+function is_inside(x1,x2,y1,y2,x3,x4,y3,y4)
+  if
+       (
+       x1>=x3 and
+       x1<=x4
+       or
+       x2>=x3 and
+       x2<=x4
+       ) and
+       (
+       y1>=y3 and
+       y1<=y4
+       or
+       y2>=y3 and
+       y2<=y4
+       ) then
+    return true
+  else
+    return false
+  end
 end
 
 --[[
@@ -535,21 +656,7 @@ function touch_enemy()
   end
   --collision detection
   if not enemy[j].is_dead and
-     (
-     x1>=x3 and
-     x1<=x4
-     or
-     x2>=x3 and
-     x2<=x4
-     )
-     and
-     (
-     y1>=y3 and
-     y1<=y4
-     or
-     y2>=y3 and
-     y2<=y4
-     ) then
+     is_inside(x1,x2,y1,y2,x3,x4,y3,y4) then
    enemy_notice(x1,x2,j)
   end
  end
@@ -639,28 +746,32 @@ function _update60()
  if(player.is_stunned) stop_stun()
  fall()
  move_blasts()
+ enemy_move_bullet()
  touch_enemy()
 end
 
 function _draw()
- cls()
- map(0,0,0,0)
- display_enemies()
- display_blasts()
- display_hp()
- display_blimit()
- spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
- print("kills: "..player.tot_kills.."/3",5,25,8)
+  cls()
+  map(0,0,0,0)
+  display_enemies()
+  enemy_check_range()
+  display_blasts()
+  display_hp()
+  display_blimit()
+  display_enemy_bullet()
+  spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
+  print("kills: "..player.tot_kills.."/3",5,25,8)
+  print(#enemy.bullet,5,35,8)
 end
 __gfx__
-00000000010000000101111001000000010000000110001001000000005555000044444000000444440000000055550000444440000000444440000000000000
-0000000010111100101444411011110010111110101111011011111000ffff500044444000000a44a400000000ffff5000444440000000484440000000000000
+00000000010000000101111001000000010000000110001001000000005555000044444000000444440000000055550000444440000000444440000056000000
+0000000010111100101444411011110010111110101111011011111000ffff500044444000000a44a400000000ffff5000444440000000484440000055000000
 00700700014444100104747001444410014444010144440001444401005f5f00006446400000044444000000008f8f0000844840000000444440000000000000
 0007700010474701000444401047470110474700014747001047470000ffff0000444440000000044000000000ffff0000444440000000004400000000000000
 000770000044440000033330004444000044440010444400004444000000f0000000445000000044440000000000f00000004455000000004444400000000000
 00700700000400000003630000040000000400000334330000040000004444400055555500000444444440000044444000555555000000044440040000000000
-00000000003330000000555000333300033330003333303003333337040444040555555500004444440040000404440405555555888884444440400000056000
-00000000033333000065006003333030303333003033300630333000040444040550556688884444400080005555555f05505556888880844444000000055000
+00000000003330000000555000333300033330003333303003333337040444040555555500004444440040000404440405555555888884444440400000000000
+00000000033333000065006003333030303333003033300630333000040444040550556688884444400080005555555f05505556888880844444000000000000
 070550003033303001011110303330030363306060333000033630005555555f66666666888044444888800000f655f066666666888800844444000000000000
 0005705030333030101444410363300600333000004440000033300000f655f06446644588805555588880000004450064466644888800855555000000000000
 0560507560444060010474700044400000444000005555000044400000011500001144110000555558880000000111000011144100000005555500000ddd0000
@@ -669,13 +780,13 @@ __gfx__
 000507000050500000603300655050000050600060000660005005000010000100110111000800000080000001000001001101110000008000000800007d0000
 00000000005050000000555060005000050060000000000065000500001000010011011100550000055000000100000100110111000055000000055000700000
 00000000066066000006506000006600066000000000000060000660055000550555055505550000550000005500005505550555000555000000555000000000
-090000000a0999a00a000000090000000a9000a00a0000000c0000000c0cc1c00c0000000100000001c000c00c00000000000000000000000000000000000000
-a0a9a9009095555a9099aa00909a99a090999a0aa099aa701011110010c4444c10111c00c0111c00c01ccc0c101cccc008808800000666600000000000000000
-0a5555a00a0585800a5555a00a55550a0a555500095555070144441001047470014444100c4444c00c4444000c44440c88888880005007060000000000000000
-90585809000555509058580a905858000958580090585800c047470c00044440c047470c10474701014747001047470088888780005000760000000000000000
+090000000a0999a00a000000090000000a9000a00a0000000c0000000c0cc1c00c0000000100000001c000c00c00000000000000000000000008800000000000
+a0a9a9009095555a9099aa00909a99a090999a0aa099aa701011110010c4444c10111c00c0111c00c01ccc0c101cccc008808800000666600008800000000000
+0a5555a00a0585800a5555a00a55550a0a555500095555070144441001047470014444100c4444c00c4444000c44440c88888880005007060008800000000000
+90585809000555509058580a905858000958580090585800c047470c00044440c047470c10474701014747001047470088888780005000760008800000000000
 00555500000499400055550000555500a05555000055550000444400000777700044440000444400104444000044440088888880005600060000000000000000
-000400000009a400000400000005000004a5a4000005000000040000000757000004000000040000077477000004000008888800005666060000000000000000
-0049400000005590044a4000044a400044aaa09004499aa700747000000055500077700007777000777770600777776700888000000555500000000000000000
+000400000009a400000400000005000004a5a4000005000000040000000757000004000000040000077477000004000008888800005666060008800000000000
+0049400000005590044a4000044a400044aaa09004499aa700747000000055500077700007777000777770600777776700888000000555500008800000000000
 04aaa40000a900a090a9a90040999400909a900a90aaa00007777700007500700777770070777700607770057077700000080000000000000000000000000000
 409a90400a09a9a009aa90aa09a990a0a04940000a9aa000707770700c0cc1c00677706007577060507770000765700000000000000000000000000000000000
 9049409090955559009990000049400000444000004990006077706010c4444c6077705000777005007770000077700000000000000000000000000000000000

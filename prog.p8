@@ -49,6 +49,7 @@ function _init()
   --blast_sp = {full,empty}
   blast_sp = {45,61}
   -- player current variables --
+  player.is_dead = false
   player.morality = morality[3]
   player.s = sprites[player.morality][1] --sprite, idle
   player.s_w = w[player.morality][1] --sprite size
@@ -242,11 +243,14 @@ end
 player touched enemy!
 knockback and stun.
 ]]
-function player_hit(kb)
-player.x += kb
+function player_hit()
 player.hp -= 1
 --player.is_stunned = true
 --player.stun_start = time()
+end
+
+function player_die()
+  player.is_dead = true
 end
 
 --[[
@@ -257,6 +261,9 @@ function stop_stun()
  local dt = time() - player.stun_start
  if dt >= player.stun_dur then
   player.is_stunned = false
+ end
+ if btn(5) then
+   _init()
  end
 end
 
@@ -423,7 +430,9 @@ function enemy_notice(x1,x2,k)
     enemy[k].flipped = true
   end
   --shoot at player
-  enemy_shoot(k)
+  if enemy[k].kind != 3 then
+    enemy_shoot(k)
+  end
 end
 
 function enemy_shoot(k)
@@ -461,10 +470,27 @@ function enemy_move_bullet()
       enemy.bullet[i].prevt = time()
       enemy.bullet[i].x += enemy.bullet[i].direction*enemy.shoot_speed*dt
       if enemy.bullet[i].x > 130 or enemy.bullet[i].x < -4 then
-        enemy.bullet[i].y = -100
-      end
+        kill_bullet(i)
+      end--end if
+    end--end if
+    --check collision
+    local x1 = enemy.bullet[i].x
+    local x2 = enemy.bullet[i].x+enemy.bullet.w-1
+    local y1 = enemy.bullet[i].y
+    local y2 = enemy.bullet[i].y+enemy.bullet.h-1
+    local x3 = player.x
+    local x4 = player.x+player.w-1
+    local y3 = player.y
+    local y4 = player.y+player.h-1
+    if is_inside(x1,x2,y1,y2,x3,x4,y3,y4) then
+      kill_bullet(i)
+      player_hit()
     end
-  end
+  end--end for
+end
+
+function kill_bullet(i)
+  enemy.bullet[i].y = -100
 end
 
 function display_enemy_bullet()
@@ -665,103 +691,117 @@ end
 --update and draw
 
 function _update60()
- dt = time() - prev_t
- prev_t = time()
- local x1 = player.x
- local x2 = player.x+player.w
- local y1 = player.y
- local y2 = player.y+player.h
- -- walk
- if btn(0) and not
-    h_collide(x1-1,y1,y2-1,0) and
-    not player.is_stunned then
-  player.x -= player.speed*dt
-  player.flipped = true
- end
- if btn(1) and not
-    h_collide(x2,y1,y2-1,0) and
-    not player.is_stunned then
-  player.x += player.speed*dt
-  player.flipped = false
- end
- --walk into wall correction
- if btn(0) or btn(1) then
-  if h_collide(x1,y1,y2-1,0) then
-   player.x += 1
-  elseif h_collide(x2-1,y1,y2-1,0) then
-   player.x -= 1
-  end
- end
- -- jump
- if btnp(2) and
-    can_jump() and
-    not player.is_stunned then
-  start_jump()
- end
- -- crouch
- if btn(3) and
-    not player.is_stunned or
-    player.is_crouching and v_collide(x1,x2,y1-1,0) then
-  player.is_crouching = true
-  player.y += player.h-ph[player.morality][4]
-  player.x += player.w-pw[player.morality][4]
-  -- 4 = crouching
-  player.s = sprites[player.morality][4]
-  player.s_h = h[player.morality][4]
-  player.s_w = w[player.morality][4]
-  player.w = pw[player.morality][4]
-  player.h = ph[player.morality][4]
-  player.speed = speed[player.morality][2] --crouching speed
- elseif not v_collide(x1,x2,y1-1,0) then
-    player.is_crouching = false
-    --1 = idle
-    player.y += player.h-ph[player.morality][1] --player.standh
-    player.x += player.w-pw[player.morality][1] --player.standw
-  if not v_collide(x1,x2,y2) then --faling
-   --6 = jumping/falling
-   player.s = sprites[player.morality][6] --player.jump_s
-   player.s_h = h[player.morality][6] --player.jump_h
-   player.s_w = w[player.morality][6] --player.jump_w
-   player.w = pw[player.morality][6] --player.jumpw
-   player.h = ph[player.morality][6] --player.jumph
-  else
-   --1 = idle
-   player.s = sprites[player.morality][1] --player.stand_s
-   player.s_h = h[player.morality][1] --player.stand_h
-   player.s_w = w[player.morality][1] --player.stand_w
-   player.w = pw[player.morality][1] --player.standw
-   player.h = ph[player.morality][1] --player.standh
-  end
-  player.speed = speed[player.morality][1] --walking speed
- end
- --shoot
- if btnp(4) and
-    player.lvl_killc<kill_limit
-    then
-  shoot()
- end
+  if not player.is_dead then
+    dt = time() - prev_t
+    prev_t = time()
+    local x1 = player.x
+    local x2 = player.x+player.w
+    local y1 = player.y
+    local y2 = player.y+player.h
+    -- walk
+    if btn(0) and not
+       h_collide(x1-1,y1,y2-1,0) and
+       not player.is_stunned then
+     player.x -= player.speed*dt
+     player.flipped = true
+    end
+    if btn(1) and not
+       h_collide(x2,y1,y2-1,0) and
+       not player.is_stunned then
+     player.x += player.speed*dt
+     player.flipped = false
+    end
+    --walk into wall correction
+    if btn(0) or btn(1) then
+     if h_collide(x1,y1,y2-1,0) then
+      player.x += 1
+     elseif h_collide(x2-1,y1,y2-1,0) then
+      player.x -= 1
+     end
+    end
+    -- jump
+    if btnp(2) and
+       can_jump() and
+       not player.is_stunned then
+     start_jump()
+    end
+    -- crouch
+    if btn(3) and
+       not player.is_stunned or
+       player.is_crouching and v_collide(x1,x2,y1-1,0) then
+     player.is_crouching = true
+     player.y += player.h-ph[player.morality][4]
+     player.x += player.w-pw[player.morality][4]
+     -- 4 = crouching
+     player.s = sprites[player.morality][4]
+     player.s_h = h[player.morality][4]
+     player.s_w = w[player.morality][4]
+     player.w = pw[player.morality][4]
+     player.h = ph[player.morality][4]
+     player.speed = speed[player.morality][2] --crouching speed
+    elseif not v_collide(x1,x2,y1-1,0) then
+       player.is_crouching = false
+       --1 = idle
+       player.y += player.h-ph[player.morality][1] --player.standh
+       player.x += player.w-pw[player.morality][1] --player.standw
+     if not v_collide(x1,x2,y2) then --faling
+      --6 = jumping/falling
+      player.s = sprites[player.morality][6] --player.jump_s
+      player.s_h = h[player.morality][6] --player.jump_h
+      player.s_w = w[player.morality][6] --player.jump_w
+      player.w = pw[player.morality][6] --player.jumpw
+      player.h = ph[player.morality][6] --player.jumph
+     else
+      --1 = idle
+      player.s = sprites[player.morality][1] --player.stand_s
+      player.s_h = h[player.morality][1] --player.stand_h
+      player.s_w = w[player.morality][1] --player.stand_w
+      player.w = pw[player.morality][1] --player.standw
+      player.h = ph[player.morality][1] --player.standh
+     end
+     player.speed = speed[player.morality][1] --walking speed
+    end
+    --shoot
+    if btnp(4) and
+       player.lvl_killc<kill_limit
+       then
+     shoot()
+   end
 
- if(player.is_jumping) jump()
+   if(player.is_jumping) jump()
 
- if(player.is_stunned) stop_stun()
- fall()
- move_blasts()
- enemy_move_bullet()
- touch_enemy()
+   if(player.is_stunned) stop_stun()
+   fall()
+   move_blasts()
+   enemy_move_bullet()
+   touch_enemy()
+   if player.hp<=0 then
+     player_die()
+   end
+ else
+   if btn(4) then
+     _init()
+   end
+ end
 end
 
 function _draw()
   cls()
-  map(0,0,0,0)
-  display_enemies()
-  enemy_check_range()
-  display_blasts()
-  display_hp()
-  display_blimit()
-  display_enemy_bullet()
-  spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
-  print("kills: "..player.tot_kills.."/3",5,25,8)
-  print(#enemy.bullet,5,35,8)
+  if not player.is_dead then
+    map(0,0,0,0)
+    display_enemies()
+    enemy_check_range()
+    display_blasts()
+    display_hp()
+    display_blimit()
+    display_enemy_bullet()
+    spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
+    print("kills: "..player.tot_kills.."/3",5,25,8)
+  else
+    print("game over",48,60,8)
+    print("press z to start again",20,70,8)
+  end
+
 end
 __gfx__
 00000000010000000101111001000000010000000110001001000000005555000044444000000444440000000055550000444440000000444440000056000000

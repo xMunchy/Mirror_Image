@@ -246,19 +246,24 @@ what to do when player
 kills someone
 ]]
 function kill(b,e)
- kill_blast(b)
- kill_enemy(e)
- player.tot_kills += 1
- player.lvl_killc += 1
- local ratio = player.tot_kills/pot_kills
- dab = player.morality..morality[2]..ratio
- if ratio > 0.5 then --make evil
-  player.morality = morality[2]
-  player.stealth = stealth[2]
- elseif ratio > 0.2 then --make neutral
-  player.morality = morality[1]
-  player.stealth = stealth[1]
- end
+  kill_blast(b)
+  kill_enemy(e)
+  player.tot_kills += 1
+  player.lvl_killc += 1
+  local ratio = player.tot_kills/pot_kills
+  dab = player.morality..morality[2]..ratio
+  if ratio > 0.5 then --make evil
+    player.morality = morality[2]
+    player.stealth = stealth[2]
+  elseif player.morality != morality[2] and
+       ratio > 0.2 then --make neutral
+    player.morality = morality[1]
+    player.stealth = stealth[1]
+  elseif player.morality != morality[2] and
+         ration <= 0.2 then --make good
+    player.morality = morality[3]
+    player.stealth = stealth[3]
+  end
 end
 
 --[[

@@ -3,6 +3,8 @@ version 16
 __lua__
 --init
 function _init()
+  modes = {"title","game","over"}
+  game = modes[1]
   -- game variables --
   prev_t = time()
   pot_kills = 0 --total potential kills
@@ -110,8 +112,6 @@ function _init()
  path1 = {120,-120}
  path2 = {48,-48}
  path3 = {16,-16}
-
- new_level(120,0,lvl,3)
 end
 
 --[[
@@ -129,11 +129,13 @@ function new_level(x,y,lvl,potk)
  pot_kills += potk
  -- enemies --
  enemy = {} --kind 1 ez, 2 med, 3 hard
- enemy.s = {8,7,9}
+ enemy.s = {8,7,9} --idle sprites
  enemy.s_w = {1,1,2} --sprite size
  enemy.s_h = {2,2,2}
  enemy.w = {7,7,12} --size by pixels
  enemy.h = {16,16,16}
+ enemy.walk_s = {129,128} --walk sprites
+ enemy.move_animt = 0.5
  enemy.speed = {16,16,32}
  enemy.range = {40,60,60}
  enemy.attack_s = {12,11,13}
@@ -490,6 +492,7 @@ function make_enemy(kind,x,y,flipped,path)
   enemy[k].waiting = false
   enemy[k].is_jumping = false
   enemy[k].attack_s = enemy.attack_s[kind]
+  enemy[k].move_prevt = time()
 end
 
 --[[
@@ -503,6 +506,15 @@ function move_enemy()
     if enemy[i].path and --path exists
        not enemy[i].sees_you and
        not enemy[i].waiting then
+      local mt = time()-enemy[i].move_prevt
+      if mt >= enemy.move_animt then
+        enemy[i].move_prevt = time()
+        if enemy[i].s==enemy.s[enemy[i].kind] then
+          enemy[i].s = enemy.walk_s[enemy[i].kind]
+        else
+          enemy[i].s = enemy.s[enemy[i].kind]
+        end
+      end
       local p = enemy[i].path_prog
       local xdirection = 0
       if enemy[i].path[p] < 0 then --facing left
@@ -527,6 +539,7 @@ function move_enemy()
     elseif enemy[i].waiting and
         time()-enemy[i].wait_start>=enemy.wait then
         enemy[i].waiting = false
+        enemy[i].s = enemy.s[enemy[i].kind]
     end
   end --end for
 end
@@ -661,7 +674,6 @@ function enemy_check_range()
         enemy[i].s = enemy[i].attack_s --attack sprite
       else
         enemy[i].sees_you = false
-        enemy[i].s = enemy.s[enemy[i].kind] --normal sprite
       end
     end
   end
@@ -853,7 +865,13 @@ end
 --update and draw
 
 function _update60()
-  if not player.is_dead then
+  if game == modes[1] then --splash
+    if btn(4) then
+     game = modes[2]
+     prev_t = time()
+     new_level(120,0,lvl,3)
+    end
+  elseif game == modes[2] then
     dt = time() - prev_t
     prev_t = time()
     local x1 = player.x
@@ -951,7 +969,7 @@ function _update60()
    if player.hp<=0 then
      player_die()
    end
- else
+ elseif game==modes[3] then --dead
    if btn(4) then
      _init()
    end
@@ -960,7 +978,10 @@ end
 
 function _draw()
   cls()
-  if not player.is_dead then
+  if game==modes[1] then --splash
+    spr(192,44,20,5,3)
+    print("press z to start",32,64,5)
+  elseif game==modes[2] then --game
     display_map(lvl)
     display_enemies()
     enemy_check_range()
@@ -968,7 +989,7 @@ function _draw()
     display_attr()
     display_enemy_bullet()
     spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
-  else
+  elseif game==modes[3] then --game over
     print("game over",48,60,8)
     print("press z to start again",20,70,8)
   end

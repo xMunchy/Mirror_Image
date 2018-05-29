@@ -63,6 +63,8 @@ function _init()
   player.y = 0
   player.hp = player.max_hp
   player.flipped = false
+  player.move_animt = 0.5
+  player.move_prevt = 0
   player.speed = speed[1] --neutral speed
   player.stealth = stealth[3]
   player.is_crouching = false
@@ -199,6 +201,20 @@ function display_map(lvl)
 end
 -->8
 --player
+
+--[[
+change sprite, update sizes, x, y, speed
+]]
+function change_sprite(id)
+  if(not player.is_hit) player.s = sprites[player.morality][id]
+  player.hit_prev_s = sprites[player.morality][id]
+  player.y += player.h-ph[player.morality][id]
+  player.x += player.w-pw[player.morality][id]
+  player.s_h = h[player.morality][id]
+  player.s_w = w[player.morality][id]
+  player.w = pw[player.morality][id]
+  player.h = ph[player.morality][id]
+end
 
 --can the player jump?
 function can_jump()
@@ -371,11 +387,11 @@ function shoot()
    blast[k].y = player.y+4
   end
   if player.flipped then --left
-   blast[k].x = player.x-blast.w
+   blast[k].x = player.x-blast.w+1
    blast[k].mx = -blast.speed
    blast[k].flipped = true
   else --right
-   blast[k].x = player.x+player.s_w*8
+   blast[k].x = player.x+player.w-1
    blast[k].mx = blast.speed
    blast[k].flipped = false
   end
@@ -421,27 +437,25 @@ function display_blasts()
  end
 end
 
-function display_hp()
+function display_attr()
   for i=1,player.max_hp do
     if i<= player.hp then
-      spr(health_sp[1],(i-1)*8,5)
+      spr(health_sp[1],(i-1)*8,2)
     else
-      spr(health_sp[2],(i-1)*8,5)
+      spr(health_sp[2],(i-1)*8,2)
     end
   end
-end
-
-function display_blimit()
   for i=1,blast.limit do
     if (not blast[i] or --if blast[i] doesn't exist
        blast[i].y < 0) and
        player.lvl_killc<kill_limit then --blast[i] is done
-      spr(blast_sp[1],(blast.limit-i)*8,15)
+      spr(blast_sp[1],(blast.limit-i)*8,10)
     else
-      spr(blast_sp[2],(blast.limit-i)*8,15)
+      spr(blast_sp[2],(blast.limit-i)*8,10)
     end
   end
 end
+
 -->8
 --enemies
 
@@ -863,37 +877,38 @@ function _update60()
        not player.is_stunned or
        player.is_crouching and v_collide(x1,x2-1,y1-1,0) then
       player.is_crouching = true
-      player.y += player.h-ph[player.morality][4]
-      player.x += player.w-pw[player.morality][4]
-      -- 4 = crouching
-      if(not player.is_hit) player.s = sprites[player.morality][4]
-      player.hit_prev_s = sprites[player.morality][4]
-      player.s_h = h[player.morality][4]
-      player.s_w = w[player.morality][4]
-      player.w = pw[player.morality][4]
-      player.h = ph[player.morality][4]
+      if btn(0) or btn(1) then --crouch walking
+        local mt = time()-player.move_prevt
+        if mt >= player.move_animt then
+          player.move_prevt = time()
+          if player.s==sprites[player.morality][4] then
+            change_sprite(5)
+          else
+            change_sprite(4)
+          end
+        end
+      else
+        change_sprite(4) --crouch idle
+      end
       player.speed = speed[player.morality][2] --crouching speed
     elseif not v_collide(x1,x2-1,y1,0) then
       player.is_crouching = false
-      --1 = idle
-      player.y += player.h-ph[player.morality][1]
-      player.x += player.w-pw[player.morality][1]
-    if not v_collide(x1,x2,y2) then --faling
+    if not v_collide(x1,x2,y2) then --falling
       --6 = jumping/falling
-      if(not player.is_hit) player.s = sprites[player.morality][6]
-      player.hit_prev_s = sprites[player.morality][6]
-      player.s_h = h[player.morality][6]
-      player.s_w = w[player.morality][6]
-      player.w = pw[player.morality][6]
-      player.h = ph[player.morality][6]
-     else
+      change_sprite(6)
+    elseif btn(0) or btn(1) then --is walking
+      local mt = time()-player.move_prevt
+      if mt >= player.move_animt then
+        player.move_prevt = time()
+        if player.s==sprites[player.morality][2] then
+          change_sprite(3)
+        else
+          change_sprite(2)
+        end
+      end
+    else --idle
       --1 = idle
-      if(not player.is_hit) player.s = sprites[player.morality][1]
-      player.hit_prev_s = sprites[player.morality][1]
-      player.s_h = h[player.morality][1]
-      player.s_w = w[player.morality][1]
-      player.w = pw[player.morality][1]
-      player.h = ph[player.morality][1]
+      change_sprite(1)
      end
      player.speed = speed[player.morality][1] --walking speed
     end
@@ -902,13 +917,20 @@ function _update60()
        player.lvl_killc<kill_limit
        then
      shoot()
-     player.shoot_start = time()
-   end
+    player.shoot_start = time()
+  end
+
+  if time()-player.shoot_start<player.shoot_animt then
+    if player.is_crouching then
+      change_sprite(5)
+    else
+      change_sprite(7)
+    end
+  end
 
    if(player.is_jumping) jump()
    if(player.is_stunned) stop_stun()
    if(player.is_hit) player_flash()
-   if(time()-player.shoot_start<player.shoot_animt) player.s=sprites[player.morality][7]
    fall()
    move_blasts()
    enemy_move_bullet()
@@ -931,8 +953,7 @@ function _draw()
     display_enemies()
     enemy_check_range()
     display_blasts()
-    display_hp()
-    display_blimit()
+    display_attr()
     display_enemy_bullet()
     spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
   else
@@ -958,21 +979,21 @@ __gfx__
 000507000050500000603300655050000050600060000660005005000010000100110111000800000080000001000001001101110000008000000800007d0000
 00000000005050000000555060005000050060000000000065000500001000010011011100550000055000000100000100110111000055000000055000700000
 00000000066066000006506000006600066000000000000060000660055000550555055505550000550000005500005505550555000555000000555000000000
-090000000a0999a00a000000090000000a9000a00a0000000c0000000c0cccc00c0000000c0000000cc000c00c00000000000000000000000008800000000000
-a0a9a9009095555a9099aa00909a99a090999a0aa099aa70c0cccc00c0c4444cc0cccc00c0cccc00c0cccc0cc0ccccc000000000000666600008800000000000
-0a5555a00a0585800a5555a00a55550a0a555500095555070c4444c00c0474700c4444c00c4444c00c4444000c44440c08808800005007060008800000000000
-90585809000555509058580a905858000958580090585800c047470c00044440c047470cc047470c0c474700c047470028887800005000760008800000000000
-00555500000499400055550000555500a05555000055550000444400000777700044440000444400c04444000044440028888800005600060000000000000000
-000400000009a400000400000005000004a5a4000005000000040000000757000004000000040000077477000004000002888000005666060008800000000000
-0049400000005590044a4000044a400044aaa09004499aa700747000000055500077700007777000777770600777776700280000000555500008800000000000
+090000000a0999a00a000000090000000a9000a00a0000000c0000000c0cccc00c0000000c0000000cc000c00c00000000880880006666000008800000000000
+a0a9a9009095555a9099aa00909a99a090999a0aa099aa70c0cccc00c0c4444cc0cccc00c0ccccc0c0cccc0cc0ccccc002888780050070600008800000000000
+0a5555a00a0585800a5555a00a55550a0a555500095555070c4444c00c0474700c4444c00c44440c0c4444000c44440c02888880050007600008800000000000
+90585809000555509058580a905858000958580090585800c047470c00044440c047470cc04747000c474700c047470000288800056000600008800000000000
+00555500000499400055550000555500a05555000055550000444400000777700044440000444400c04444000044440000028000056660600000000000000000
+000400000009a400000400000005000004a5a4000005000000040000000757000004000000040000077477000004000000000000005555000008800000000000
+0049400000005590044a4000044a400044aaa09004499aa700747000000055500077700007777000777770600777776700000000000000000008800000000000
 04aaa40000a900a090a9a90040999400909a900a90aaa00007777700007500700777770070777700607770057077700000000000000000000000000000000000
-409a90400a09a9a009aa90aa09a990a0a04940000a9aa000707770700c0cccc00677706007577060507770000765700000000000000000000000000000000000
-90494090909555590099900000494000004440000049900060777060c0c4444c6077705000777005007770000077700000000000000000000000000000000000
-a04440a00a05858000444000004440000055550000449000507770500c0474705077700000777000005555000077700005505500000550000000000000000000
-00555000000555500055500000555000005009000055500000555000000444400055500000555000005005000055500005050500005005000000000000000000
-005050000099449a0050500000500900aa900a000050500000505000007777750050500000500600765006000050500005000500005005000000000000000000
-0090900000a0aa00aa9090000090a000a0000aa00090090000505000005077007650500000507000700007700050050000505000000550000000000000000000
-00a0a00000005590a000a0000a00a00000000000aa000a0000606000000055607000600006007000000000007600060000050000000000000000000000000000
+409a90400a09a9a009aa90aa09a990a0a04940000a9aa000707770700c0cccc00677706007577060507770000765700005505500000550000000000000000000
+90494090909555590099900000494000004440000049900060777060c0c4444c6077705000777005007770000077700005050500005005000000000000000000
+a04440a00a05858000444000004440000055550000449000507770500c0474705077700000777000005555000077700005000500005005000000000000000000
+00555000000555500055500000555000005009000055500000555000000444400055500000555000005005000055500000505000000550000000000000000000
+005050000099449a0050500000500900aa900a000050500000505000007777750050500000500600765006000050500000050000000000000000000000000000
+0090900000a0aa00aa9090000090a000a0000aa00090090000505000005077007650500000507000700007700050050000000000000000000000000000000000
+00a0a00000005590a000a0000a00a00000000000aa000a0000606000000055607000600006007000000000007600060000000000000000000000000000000000
 0aa0aa00000a90a00000aa000aa0000000000000a0000aa007707700000750700000770007700000000000007000077000000000000000000000000000000000
 511151515555555533b3333333b33333000400400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 15151115555555553333333b3333333b000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

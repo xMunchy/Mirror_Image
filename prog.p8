@@ -132,6 +132,7 @@ function new_level(x,y,lvl,potk)
  enemy.h = {16,16,16}
  enemy.speed = {16,16,32}
  enemy.range = {40,60,60}
+ enemy.attack_s = {12,11,13}
  enemy.shoot_h = {6,6}
  enemy.surprised = 46
  enemy.reload = 2 --time between shots
@@ -162,6 +163,7 @@ function new_level(x,y,lvl,potk)
  enemy[k].path_prog, progress of movement in path
  enemy[k].wait_start
  enemy[k].waiting
+ enemy[k].attack_s, attack sprite
  enemy.bullet[i].x
  enemy.bullet[i].y
  enemy.bullet[i].direction
@@ -474,6 +476,7 @@ function make_enemy(kind,x,y,flipped,path)
   enemy[k].prev_y = enemy[k].y
   enemy[k].waiting = false
   enemy[k].is_jumping = false
+  enemy[k].attack_s = enemy.attack_s[kind]
 end
 
 --[[
@@ -512,7 +515,7 @@ function move_enemy()
         time()-enemy[i].wait_start>=enemy.wait then
         enemy[i].waiting = false
     end
-  end
+  end --end for
 end
 
 --[[
@@ -642,8 +645,10 @@ function enemy_check_range()
       end
       if enemy[i].sees_you and enemy[i].waiting then
         spr(enemy.surprised,enemy[i].x,enemy[i].y-10) --! exclamation mark
+        enemy[i].s = enemy[i].attack_s --attack sprite
       else
         enemy[i].sees_you = false
+        enemy[i].s = enemy.s[enemy[i].kind] --normal sprite
       end
     end
   end

@@ -333,6 +333,7 @@ player died, do this:
 ]]
 function player_die()
   player.is_dead = true
+  game = modes[3]
 end
 
 --[[
@@ -1197,4 +1198,3 @@ __music__
 02 1714161b
 03 1c424344
 03 1c1d1d1e
-

@@ -132,7 +132,7 @@ function new_level(x,y,lvl,potk)
  enemy.h = {16,16,16}
  enemy.speed = {16,16,32}
  enemy.range = {40,60,60}
- enemy.shoot_h = {8,8}
+ enemy.shoot_h = {6,6}
  enemy.surprised = 46
  enemy.reload = 2 --time between shots
  enemy.shoot_speed = 20
@@ -836,48 +836,45 @@ function _update60()
        not player.is_stunned then
      player.x -= player.speed*dt
      player.flipped = true
+     if h_collide(x1,y1,y2-1,0) then
+       player.x += 1
+     end
     end
     if btn(1) and not
        h_collide(x2,y1,y2-1,0) and
        not player.is_stunned then
      player.x += player.speed*dt
      player.flipped = false
-    end
-    --walk into wall correction
-    if btn(0) or btn(1) then
-     if h_collide(x1,y1,y2-1,0) then
-      player.x += 1
-     elseif h_collide(x2-1,y1,y2-1,0) then
-      player.x -= 1
+     if h_collide(x2-1,y1,y2-1,0) then
+       player.x -= 1
      end
     end
     -- jump
-    if btnp(2) and
-       can_jump() and
+    if btnp(2) and can_jump() and
        not player.is_stunned then
-     start_jump()
+      start_jump()
     end
     -- crouch
     if btn(3) and
        not player.is_stunned or
-       player.is_crouching and v_collide(x1,x2,y1-1,0) then
-     player.is_crouching = true
-     player.y += player.h-ph[player.morality][4]
-     player.x += player.w-pw[player.morality][4]
-     -- 4 = crouching
-     if(not player.is_hit) player.s = sprites[player.morality][4]
-     player.hit_prev_s = sprites[player.morality][4]
-     player.s_h = h[player.morality][4]
-     player.s_w = w[player.morality][4]
-     player.w = pw[player.morality][4]
-     player.h = ph[player.morality][4]
-     player.speed = speed[player.morality][2] --crouching speed
-    elseif not v_collide(x1,x2,y1-1,0) then
-       player.is_crouching = false
-       --1 = idle
-       player.y += player.h-ph[player.morality][1]
-       player.x += player.w-pw[player.morality][1]
-     if not v_collide(x1,x2,y2) then --faling
+       player.is_crouching and v_collide(x1,x2-1,y1-1,0) then
+      player.is_crouching = true
+      player.y += player.h-ph[player.morality][4]
+      player.x += player.w-pw[player.morality][4]
+      -- 4 = crouching
+      if(not player.is_hit) player.s = sprites[player.morality][4]
+      player.hit_prev_s = sprites[player.morality][4]
+      player.s_h = h[player.morality][4]
+      player.s_w = w[player.morality][4]
+      player.w = pw[player.morality][4]
+      player.h = ph[player.morality][4]
+      player.speed = speed[player.morality][2] --crouching speed
+    elseif not v_collide(x1,x2-1,y1,0) then
+      player.is_crouching = false
+      --1 = idle
+      player.y += player.h-ph[player.morality][1]
+      player.x += player.w-pw[player.morality][1]
+    if not v_collide(x1,x2,y2) then --faling
       --6 = jumping/falling
       if(not player.is_hit) player.s = sprites[player.morality][6]
       player.hit_prev_s = sprites[player.morality][6]
@@ -933,6 +930,7 @@ function _draw()
     display_blimit()
     display_enemy_bullet()
     spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
+    print(player.is_jumping,5,25,8)
   else
     print("game over",48,60,8)
     print("press z to start again",20,70,8)

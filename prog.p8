@@ -259,7 +259,7 @@ function jump()
  --check for ceiling
  local x1 = player.x
  local x2 = player.x+player.w-1
- if v_collide(x1,x2,player.y-1,0)
+ if v_collide(x1,x2,player.y-1)
  then
   player.jump_prog = 0 --end jump
  end
@@ -678,9 +678,9 @@ function fall()
   local y = player.y+player.h
   local x1 = player.x
   local x2 = player.x+player.w-1
-  if v_collide(x1,x2,y,0) then
+  if v_collide(x1,x2,y) then
     player.njump = 0
-    if v_collide(x1,x2,y-0.5,0) then
+    if v_collide(x1,x2,y-0.5) then
       player.y = flr(player.y-0.5)
     end
   else
@@ -691,8 +691,8 @@ function fall()
     local y = enemy[i].y+enemy[i].h
     local x1 = enemy[i].x
     local x2 = enemy[i].x+enemy[i].w-1
-    if v_collide(x1,x2,y,0) then
-      if v_collide(x1,x2,y-0.5,0) then
+    if v_collide(x1,x2,y) then
+      if v_collide(x1,x2,y-0.5) then
         enemy[i].y = flr(enemy[i].y-0.5)
       end
     else
@@ -708,7 +708,7 @@ y1: top side of player
 y2: bottom side of player
 flag: flag of relevant map tile
 ]]
-function h_collide(x,y1,y2,flag)
+function h_collide(x,y1,y2)
  -- screen boundary
  if(x>127 or x<0) return true
  --wall collision
@@ -731,19 +731,24 @@ x2: right side
 y: top or bottom of player
 flag: flag of relevant map tile
 ]]
-function v_collide(x1,x2,y,flag)
- x1 = x1
- x2 = x2
- y = y/8
- --screen boundary
- if(y<0) return true
- --wall collision
- for i=x1,x2 do
-  if fget(mget((i/8)+16*lvl,y),flag) then
-   return true
+function v_collide(x1,x2,y)
+  down = false --checking under player?
+  if(y>player.y) down = true
+  local a = flr(y/8)
+  --screen boundary
+  if(a<0) return true
+  --wall collision
+  for i=x1,x2 do
+    if fget(mget((i/8)+16*lvl,a),0) then
+      return true
+    elseif fget(mget((i/8)+16*lvl,a),1) and down then
+      return true
+    elseif fget(mget((i/8)+16*lvl,a),1) and
+           not down and y<=a*8+4 then
+      return true
+    end
   end
- end
- return false
+  return false
 end
 
 --blast map collision
@@ -753,8 +758,8 @@ function blast_hit_wall(i)
  local x1 = blast[i].x+8-blast.w
  local x2 = x1+blast.w-1
  --collision
- if h_collide(x1,y1,y2,0) or
-    h_collide(x2,y1,y2,0) then
+ if h_collide(x1,y1,y2) or
+    h_collide(x2,y1,y2) then
   kill_blast(i)
  end
 end
@@ -850,20 +855,20 @@ function _update60()
     local y2 = player.y+player.h
     -- walk
     if btn(0) and not
-       h_collide(x1-1,y1,y2-1,0) and
+       h_collide(x1-1,y1,y2-1) and
        not player.is_stunned then
      player.x -= player.speed*dt
      player.flipped = true
-     if h_collide(x1,y1,y2-1,0) then
+     if h_collide(x1,y1,y2-1) then
        player.x += 1
      end
     end
     if btn(1) and not
-       h_collide(x2,y1,y2-1,0) and
+       h_collide(x2,y1,y2-1) and
        not player.is_stunned then
      player.x += player.speed*dt
      player.flipped = false
-     if h_collide(x2-1,y1,y2-1,0) then
+     if h_collide(x2-1,y1,y2-1) then
        player.x -= 1
      end
     end
@@ -875,7 +880,7 @@ function _update60()
     -- crouch
     if btn(3) and
        not player.is_stunned or
-       player.is_crouching and v_collide(x1,x2-1,y1-1,0) then
+       player.is_crouching and v_collide(x1,x2-1,y1-1) then
       player.is_crouching = true
       if btn(0) or btn(1) then --crouch walking
         local mt = time()-player.move_prevt
@@ -891,7 +896,7 @@ function _update60()
         change_sprite(4) --crouch idle
       end
       player.speed = speed[player.morality][2] --crouching speed
-    elseif not v_collide(x1,x2-1,y1,0) then
+    elseif not v_collide(x1,x2-1,y1) then
       player.is_crouching = false
     if not v_collide(x1,x2,y2) then --falling
       --6 = jumping/falling
@@ -1028,8 +1033,8 @@ a04440a00a05858000444000004440000055550000449000507770500c0474705077700000777000
 505555050000000000000000000000000000000000000000000000000015d1000015d10000000000000000000000000000000000000000000000000000000000
 050505550000000000000000000000000000000000000000000000000015d1000015d10000000000000000000000000000000000000000000000000000000000
 __gff__
-0000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001010101000000000000000000000000010301010000000000000000000000000101000000000000000000000000000001000000000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001010101000000000000000000000000010201010000000000000000000000000101000000000000000000000000000001000000000000000000000000000000
+0000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001010101000000000000000000000000010201010000000000000000000000000101000000000000000000000000000001000000000000000000000000000000
 __map__
 0000000000000000000000000000000046484948594859574859484948575949580000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000077006600000000670000006746680066000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

@@ -130,6 +130,7 @@ function new_level(x,y,lvl,potk)
  player.s = sprites[player.morality][1] --idle --player.stand_s
  player.lvl_killc = 0
  pot_kills += potk
+ music(16)
  -- enemies --
  enemy = {} --kind 1 ez, 2 med, 3 hard
  enemy.s = {8,7,9} --idle sprites
@@ -1323,12 +1324,12 @@ __music__
 02 0a10124e
 01 17134344
 00 17144344
+00 17131544
+00 17141644
 01 17131544
-02 17141644
-01 17131518
+00 17141644
+00 17131518
 02 17141619
-01 1713151a
-02 1714161b
 03 1c424344
 03 1c1d1d1e
 

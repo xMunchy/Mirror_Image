@@ -14,7 +14,7 @@ function _init()
   kill_limit = 3 --per level
   nlvls = 2
   lvl = 1
-  lvl_kill_c = 3
+  lvl_kill_cap = 3
   x = {64,120}
   y = {0,0}
 
@@ -129,12 +129,14 @@ lvl: level id for map.
 potk: potential kills for this map.
 reboots enemies as well.
 ]]
-function new_level(x,y,potk)
+function new_level(x,y,toggled)
  player.x = x
  player.y = y
  player.s = sprites[player.morality][1] --idle --player.stand_s
- player.lvl_killc = 0
- pot_kills += potk
+ if not toggled then
+   player.lvl_killc = 0
+   pot_kills += lvl_kill_cap
+ end
  music(16)
  -- enemies --
  enemy = {} --kind 1 ez, 2 med, 3 hard
@@ -879,7 +881,7 @@ function _update60()
     if btn(4) then
      game = modes[2]
      prev_t = time()
-     new_level(x[lvl+1],y[lvl+1],lvl_kill_c)
+     new_level(x[lvl+1],y[lvl+1],false)
     end
   elseif game == modes[2] then
     dt = time() - prev_t
@@ -963,7 +965,7 @@ function _update60()
 
   if btnp(5) then
     lvl = (lvl+1)%(nlvls)
-    new_level(x[lvl+1],y[lvl+1],lvl_kill_c)
+    new_level(x[lvl+1],y[lvl+1],true)
   end
   if time()-player.shoot_start<player.shoot_animt then
     if player.is_crouching then

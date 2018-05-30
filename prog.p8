@@ -11,10 +11,15 @@ function _init()
   -- game variables --
   prev_t = time()
   pot_kills = 0 --total potential kills
-  level = 0
   kill_limit = 3 --per level
+  nlvls = 2
   lvl = 1
+  lvl_kill_c = 3
+  x = {64,120}
+  y = {0,0}
 
+  music(1)
+  
   -- player static variables --
   player = {}
   player.max_hp = 10
@@ -70,7 +75,7 @@ function _init()
   player.flipped = false
   player.move_animt = 0.5
   player.move_prevt = 0
-  player.speed = speed[1] --neutral speed
+  player.speed = speed[1][1] --neutral walking
   player.stealth = stealth[3]
   player.is_crouching = false
   player.tot_kills = 0 --total kills
@@ -124,7 +129,7 @@ lvl: level id for map.
 potk: potential kills for this map.
 reboots enemies as well.
 ]]
-function new_level(x,y,lvl,potk)
+function new_level(x,y,potk)
  player.x = x
  player.y = y
  player.s = sprites[player.morality][1] --idle --player.stand_s
@@ -874,11 +879,12 @@ function _update60()
     if btn(4) then
      game = modes[2]
      prev_t = time()
-     new_level(120,0,lvl,3)
+     new_level(x[lvl+1],y[lvl+1],lvl_kill_c)
     end
   elseif game == modes[2] then
     dt = time() - prev_t
-    prev_t = time()
+    distance = flr(player.speed*dt)
+    if(distance>0) prev_t = time()
     local x1 = player.x
     local x2 = player.x+player.w
     local y1 = player.y
@@ -887,7 +893,7 @@ function _update60()
     if btn(0) and not
        h_collide(x1-1,y1,y2-1) and
        not player.is_stunned then
-     player.x -= player.speed*dt
+     player.x -= distance
      player.flipped = true
      if h_collide(x1,y1,y2-1) then
        player.x += 1
@@ -896,7 +902,7 @@ function _update60()
     if btn(1) and not
        h_collide(x2,y1,y2-1) and
        not player.is_stunned then
-     player.x += player.speed*dt
+     player.x += distance
      player.flipped = false
      if h_collide(x2-1,y1,y2-1) then
        player.x -= 1
@@ -955,6 +961,10 @@ function _update60()
     player.shoot_start = time()
   end
 
+  if btnp(5) then
+    lvl = (lvl+1)%(nlvls)
+    new_level(x[lvl+1],y[lvl+1],lvl_kill_c)
+  end
   if time()-player.shoot_start<player.shoot_animt then
     if player.is_crouching then
       change_sprite(5)

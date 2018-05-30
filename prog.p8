@@ -19,7 +19,7 @@ function _init()
   y = {0,0}
 
   music(1)
-  
+
   -- player static variables --
   player = {}
   player.max_hp = 10
@@ -61,6 +61,10 @@ function _init()
   blast_sp = {45,61}
   --stealth = {neutral,evil,good}
   stealth = {0,-10,10}
+  --blinking, offset = {standing,crouching}
+  eye_color = {7,8,7}
+  eye_offset_y = {3,2}
+  eye_offset_x = {3,4}
   -- player current variables --
   player.is_dead = false
   player.morality = morality[3]
@@ -91,6 +95,14 @@ function _init()
   player.hit_dur = 1 --length of flashing
   player.hit_s = 47 --sprite to flash to
   player.hit_prev_s = player.s --most recent sprite
+  --blinking
+  player.eye_offset_y = eye_offset_y[1]
+  player.eye_offset_x = eye_offset_x[1]
+  player.eye_gap = 2
+  player.next_blink = time() + flr(rnd(10)+1)
+  player.blink_dur = 0.5
+  player.eyes_open = true
+  player.eye_color = eye_color[player.morality]
 
   --jumping variables
   player.jump_tprev = 0 --jump time
@@ -145,7 +157,7 @@ function new_level(x,y,toggled)
  enemy.s_h = {2,2,2}
  enemy.w = {7,7,12} --size by pixels
  enemy.h = {16,16,16}
- enemy.walk_s = {129,128} --walk sprites
+ enemy.walk_s = {129,128,9} --walk sprites
  enemy.move_animt = 0.5
  enemy.speed = {16,16,32}
  enemy.range = {40,60,60}
@@ -162,6 +174,11 @@ function new_level(x,y,toggled)
  enemy.bullet.h = 2 --size by pixels
  enemy.bullet.w = 2
  enemy.wait = 2 --wait between path steps and after seeing player
+ enemy.eye_offset_x = {2,2,5}
+ enemy.eye_offset_y = {2,2,1}
+ enemy.eye_gap = {3,2,3}
+ enemy.eye_color = {6,5,10}
+ enemy.blink_dur = 0.5
  --[[ enemy attributes
  enemy[k].x
  enemy[k].y
@@ -182,6 +199,12 @@ function new_level(x,y,toggled)
  enemy[k].wait_start
  enemy[k].waiting
  enemy[k].attack_s, attack sprite
+ enemy[k].next_blink, time blinks
+ enemy[k].eyes_open
+ enemy[k].eye_offset_x
+ enemy[k].eye_offset_y
+ enemy[k].eye_gap
+ enemy[k].eye_color
  enemy.bullet[i].x
  enemy.bullet[i].y
  enemy.bullet[i].direction
@@ -297,14 +320,13 @@ function kill(b,e)
   player.tot_kills += 1
   player.lvl_killc += 1
   local ratio = player.tot_kills/pot_kills
-  dab = player.morality..morality[2]..ratio
   if ratio > 0.5 then --make evil
     player.morality = morality[2]
-    player.stealth = stealth[2]
   elseif ratio > 0.2 then --make neutral
     player.morality = morality[1]
-    player.stealth = stealth[1]
   end
+  player.stealth = stealth[player.morality]
+  player.eye_color = eye_color[player.morality]
 end
 
 --[[
@@ -317,8 +339,8 @@ function player_hit()
   player.is_hit = true
   player.hit_prev_s = player.s
   player.hp -= 1
---player.is_stunned = true
---player.stun_start = time()
+  --player.is_stunned = true
+  --player.stun_start = time()
 end
 
 --[[
@@ -505,6 +527,12 @@ function make_enemy(kind,x,y,flipped,path)
   enemy[k].is_jumping = false
   enemy[k].attack_s = enemy.attack_s[kind]
   enemy[k].move_prevt = time()
+  enemy[k].next_blink = time()+flr(rnd(10)+1)
+  enemy[k].eyes_open = true
+  enemy[k].eye_offset_x = enemy.eye_offset_x[kind]
+  enemy[k].eye_offset_y = enemy.eye_offset_y[kind]
+  enemy[k].eye_gap = enemy.eye_gap[kind]
+  enemy[k].eye_color = enemy.eye_color[kind]
 end
 
 --[[
@@ -564,16 +592,14 @@ function kill_enemy(k)
  enemy[k].is_dead = true
 end
 
-pmid = 0
-emid = 0
 --[[
 enemy notices where player is
 ]]
 function enemy_notice(x1,x2,k)
   enemy[k].sees_you = true
   --if touched, face player
-  pmid = (x1+x2)/2
-  emid = (2*enemy[k].x+enemy[k].w)/2
+  local pmid = (x1+x2)/2
+  local emid = (2*enemy[k].x+enemy[k].w)/2
   if pmid <= emid then
     enemy[k].flipped = false
   else
@@ -657,7 +683,38 @@ function display_enemies()
   for i=1,#enemy do
     if not enemy[i].is_dead then
       spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h,enemy[i].flipped)
+      display_eyes(enemy[i])
     end
+  end
+end
+
+--[[
+Display eyes, make blinking
+]]
+function display_eyes(entity)
+  local x = entity.x
+  local y = entity.y
+  local eye_y = y+entity.eye_offset_y
+  if entity.flipped then
+    eye_x = x+entity.s_w*8-1-entity.eye_offset_x
+    eye_x2 = eye_x-entity.eye_gap
+  else
+    eye_x = x+entity.eye_offset_x
+    eye_x2 = eye_x+entity.eye_gap
+  end
+  --blink
+  if time() >= entity.next_blink then
+    if entity.eyes_open then --blink
+      entity.eyes_open = false
+      entity.next_blink = time() + enemy.blink_dur
+    else --open eyes
+      entity.eyes_open = true
+      entity.next_blink = time() + flr(rnd(10)+1)
+    end
+  end
+  if entity.eyes_open then
+    pset(eye_x,eye_y,entity.eye_color)
+    pset(eye_x2,eye_y,entity.eye_color)
   end
 end
 
@@ -920,6 +977,9 @@ function _update60()
        not player.is_stunned or
        player.is_crouching and v_collide(x1,x2-1,y1-1) then
       player.is_crouching = true
+      --blinking
+      player.eye_offset_y = eye_offset_y[2]
+      player.eye_offset_x = eye_offset_x[2]
       if btn(0) or btn(1) then --crouch walking
         local mt = time()-player.move_prevt
         if mt >= player.move_animt then
@@ -936,24 +996,28 @@ function _update60()
       player.speed = speed[player.morality][2] --crouching speed
     elseif not v_collide(x1,x2-1,y1) then
       player.is_crouching = false
-    if not v_collide(x1,x2,y2) then --falling
-      --6 = jumping/falling
-      change_sprite(6)
-    elseif btn(0) or btn(1) then --is walking
-      local mt = time()-player.move_prevt
-      if mt >= player.move_animt then
-        player.move_prevt = time()
-        if player.s==sprites[player.morality][2] then
-          change_sprite(3)
-        else
-          change_sprite(2)
+      --blinking
+      player.eye_offset_y = eye_offset_y[1]
+      player.eye_offset_x = eye_offset_x[1]
+       --falling
+      if not v_collide(x1,x2,y2) then
+        --6 = jumping/falling
+        change_sprite(6)
+      elseif btn(0) or btn(1) then --is walking
+        local mt = time()-player.move_prevt
+        if mt >= player.move_animt then
+          player.move_prevt = time()
+          if player.s==sprites[player.morality][2] then
+            change_sprite(3)
+          else
+            change_sprite(2)
+          end
         end
+      else --idle
+        --1 = idle
+        change_sprite(1)
       end
-    else --idle
-      --1 = idle
-      change_sprite(1)
-     end
-     player.speed = speed[player.morality][1] --walking speed
+      player.speed = speed[player.morality][1] --walking speed
     end
     --shoot
     if btnp(4) and
@@ -1006,24 +1070,24 @@ function _draw()
     display_attr()
     display_enemy_bullet()
     spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
+    display_eyes(player)
   elseif game==modes[3] then --game over
     print("game over",48,60,8)
     print("press z to start again",20,70,8)
   end
-
 end
 __gfx__
 00000000010000000101111001000000001000000110001001000000005555000044444000000444440000000055550000444440000000444440000056000000
-0000000010111100101444411011110001111100101111011011111000ffff500044444000000a44a400000000ffff5000444440000000484440000055000000
-00700700014444100104747001444410104444100144440001444401005f5f00006446400000044444000000008f8f0000844840000000444440000000000000
-0007700010474701000444401047470101474701014747001047470000ffff0000444440000000044000000000ffff0000444440000000004400000000000000
+0000000010111100101444411011110001111100101111011011111000ffff5000444440000004444400000000ffff5000444440000000444440000055000000
+0070070001444410010444400144441010444410014444000144440100ffff0000444440000004444400000000ffff0000444440000000444440000000000000
+0007700010444401000444401044440101444401014444001044440000ffff0000444440000000044000000000ffff0000444440000000004400000000000000
 000770000044440000033330004444001044440010444400004444000000f0000000445500000044440000000000f00000004455000000004444400000000000
 00700700000400000003630000040000000400000334330000040000004444400055555500000444444440000044444000555556000000044440040000000000
 00000000003330000000555000333300033330003333303003333337040444040555555500004444440040000404440466666666888884444440400000000000
 00000000033333000065006003333030303333003033300630333000040444040550555688884444400080005555555f64466644888880844444000000000000
 000077703033303001011110303330030363306060333000033630005555555f66666666888044444888800000f655f000555446888800844444000000000000
 1007560730333030101444410363300600333000004440000033300000f655f06446664488805555588880000004450000555565888800855555000000000000
-0076006760444060010474700044400000444000005555000044400000011500001114410000555558880000000111000011111100000005555500000ddd0000
+0076006760444060010444400044400000444000005555000044400000011500001114410000555558880000000111000011111100000005555500000ddd0000
 677100070055500000044440005550000055500000500500005550000001111000111161000055000550000000111110001111110000000550055000dccccddd
 0056510700505000003333360050500000500500655005000050500000110010001101110005500000550000001000100011011100000055000555000d77dd00
 100017600050500000603300655050000050600060000660005005000010000100110111000800000080000001000001001101110000008000000800007d0000
@@ -1031,15 +1095,15 @@ __gfx__
 00000000066066000006506000006600066000000000000060000660055000550555055505550000550000005500005505550555000555000000555000000000
 090000000a0999a00a000000009000000a9000a00a0000000c0000000c0cccc00c00000000c000000cc000c00c00000000880880006666000008800000000000
 a0a9a9009095555a9099aa00099a990090999a0aa099aa70c0cccc00c0c4444cc0cccc000ccccc00c0cccc0cc0ccccc002888780050070600008800000000000
-0a5555a00a0585800a5555a0905555a00a555500095555070c4444c00c0474700c4444c0c04444c00c4444000c44440c02888880050007600008800000000000
-90585809000555509058580a0a58580a0958580090585800c047470c00044440c047470c0c47470c0c474700c047470000288800056000600008800000000000
+0a5555a00a0555500a5555a0905555a00a555500095555070c4444c00c0444400c4444c0c04444c00c4444000c44440c02888880050007600008800000000000
+90555509000555509055550a0a55550a0955550090555500c044440c00044440c044440c0c44440c0c444400c044440000288800056000600008800000000000
 00555500000499400055550090555500a055550000555500004444000007777000444400c0444400c04444000044440000028000056660600000000000000000
 000400000009a400000400000005000004a5a4000005000000040000000757000004000000040000077477000004000000000000005555000008800000000000
 0049400000005590044a4000044a400044aaa09004499aa700777000000055500077700007777000777770600777776700000000000000000008800000000000
 04aaa40000a900a090a9a90040999400909a900a90aaa00007777700007500700777770070777700607770057077700000000000000000000000000000000000
 409a90400a09a9a009aa90aa09a990a0a04940000a9aa000707770700c0cccc00677706007577060507770000765700005505500000550000000000000000000
 90494090909555590099900000494000004440000049900060777060c0c4444c6077705000777005007770000077700005050500005005000000000000000000
-a04440a00a05858000444000004440000055550000449000507770500c0474705077700000777000005555000077700005000500005005000000000000000000
+a04440a00a05555000444000004440000055550000449000507770500c0444405077700000777000005555000077700005000500005005000000000000000000
 00555000000555500055500000555000005009000055500000555000000444400055500000555000005005000055500000505000000550000000000000000000
 005050000099449a0050500000500900aa900a000050500000505000007777750050500000500600765006000050500000050000000000000000000000000000
 0090900000a0aa00aa9090000090a000a0000aa00090090000505000005077007650500000507000700007700050050000000000000000000000000000000000
@@ -1344,4 +1408,3 @@ __music__
 02 17141619
 03 1c424344
 03 1c1d1d1e
-

@@ -103,6 +103,19 @@ function _init()
   player.blink_dur = 0.5
   player.eyes_open = true
   player.eye_color = eye_color[player.morality]
+  --particles
+  p = {}
+  p.limit = 20
+  p.prevt = {time(),time()} --{hair,blast}
+  p.timecap = {0.5,0.2} --{hair,blast}
+  p.lifespan = {0.5,1} --{hair,blast}
+  rndx = {8,4} --{hair,blast}
+  rndy = {4,8} --{hair,blast}
+  neutral_colors = {}
+  good_colors = {7,12}
+  evil_colors = {8,9,10}
+  hair_colors = {neutral_colors,evil_colors,good_colors}
+  blast_colors = {1,5,6,7}
 
   --jumping variables
   player.jump_tprev = 0 --jump time
@@ -235,6 +248,52 @@ display map for specific level
 function display_map(lvl)
   map(16*lvl,0,0,0)
 end
+
+
+--[[
+make a particle
+x: right border of particle spawn box
+y: bottom border of particle spawn box
+dx: x movement of particle
+dy: y movement of particle
+source: source of particle (ie hair, blast)
+color: list of potential colors
+]]
+function make_particle(x,y,dx,dy,source,color)
+  local dt = time() - p.prevt[source]
+  if dt >= p.timecap[source] then
+    p.prevt[source] = time()
+    --find valid particle
+    local i = 0
+    for j=1,#p do
+      if time() >= p[j].lifespan then
+        i = j
+      end
+    end
+    if i==0 and #p<p.limit then
+      i = #p+1
+    end
+    --make particle
+    p[i] = {}
+    p[i].x = x + rnd(rndx[source])
+    p[i].y = y - rnd(rndy[source])
+    p[i].dx = dx
+    p[i].dy = dy
+    p[i].lifespan = time() + p.lifespan[source]
+    p[i].color = color[flr(rnd(#color)+1)]
+  end
+end
+
+function display_particle()
+  for i=1,#p do
+    if time() < p[i].lifespan then
+      pset(p[i].x,p[i].y,p[i].color)
+      p[i].x += p[i].dx
+      p[i].y += p[i].dy
+    end
+  end
+end
+
 -->8
 --player
 
@@ -443,14 +502,6 @@ function move_blasts()
   --move only valid blasts
   if blast[i].y>0 then
    blast[i].x += blast[i].mx
-   --is blast still valid?
-   if blast[i].flipped and
-      blast[i].x<-4 then
-    kill_blast(i) --not valid
-   elseif not blast[i].flipped and
-      blast[i].x > 130 then
-    kill_blast(i)
-   end
    --check wall collision
    blast_hit_wall(i)
    --check enemy collision
@@ -469,7 +520,16 @@ end
 
 function display_blasts()
  for i=1,#blast do
-  spr(blast.s,blast[i].x,blast[i].y,blast.s_w,blast.s_h,blast[i].flipped)
+   if blast[i].y > 0 then
+     spr(blast.s,blast[i].x,blast[i].y,blast.s_w,blast.s_h,blast[i].flipped)
+     local x = blast[i].x
+     local dx = -0.1
+     if blast[i].flipped then
+       x = x+blast.w
+       dx = 0.1
+     end
+     make_particle(x,blast[i].y+blast.h,dx,-0.1,2,blast_colors)
+  end
  end
 end
 
@@ -823,13 +883,13 @@ function v_collide(x1,x2,y)
   for i=x1,x2 do
     if fget(mget((i/8)+16*lvl,a),0) then
       return true
-    elseif fget(mget((i/8)+16*lvl,a),1) and down then
+    elseif fget(mget((i/8)+16*lvl,a),1) and down then --upper half blocks
       return true
     elseif fget(mget((i/8)+16*lvl,a),1) and
            not down and
            (y<=a*8+4 or player.is_crouching) then
       return true
-    elseif fget(mget((i/8)+16*lvl,a),2) and not down then
+    elseif fget(mget((i/8)+16*lvl,a),2) and not down then --lower half blocks
       return true
     elseif fget(mget((i/8)+16*lvl,a),2) and
            down and y>=a*8+4 then
@@ -1042,6 +1102,7 @@ function _update60()
    if(player.is_jumping) jump()
    if(player.is_stunned) stop_stun()
    if(player.is_hit) player_flash()
+   make_particle(player.x,player.y,0,-0.1,1,hair_colors[player.morality])
    fall()
    move_blasts()
    enemy_move_bullet()
@@ -1071,6 +1132,7 @@ function _draw()
     display_enemy_bullet()
     spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
     display_eyes(player)
+    display_particle()
   elseif game==modes[3] then --game over
     print("game over",48,60,8)
     print("press z to start again",20,70,8)
@@ -1086,11 +1148,11 @@ __gfx__
 00000000003330000000555000333300033330003333303003333337040444040555555500004444440040000404440466666666888884444440400000000000
 00000000033333000065006003333030303333003033300630333000040444040550555688884444400080005555555f64466644888880844444000000000000
 000077703033303001011110303330030363306060333000033630005555555f66666666888044444888800000f655f000555446888800844444000000000000
-1007560730333030101444410363300600333000004440000033300000f655f06446664488805555588880000004450000555565888800855555000000000000
+0007560730333030101444410363300600333000004440000033300000f655f06446664488805555588880000004450000555565888800855555000000000000
 0076006760444060010444400044400000444000005555000044400000011500001114410000555558880000000111000011111100000005555500000ddd0000
 677100070055500000044440005550000055500000500500005550000001111000111161000055000550000000111110001111110000000550055000dccccddd
 0056510700505000003333360050500000500500655005000050500000110010001101110005500000550000001000100011011100000055000555000d77dd00
-100017600050500000603300655050000050600060000660005005000010000100110111000800000080000001000001001101110000008000000800007d0000
+000017600050500000603300655050000050600060000660005005000010000100110111000800000080000001000001001101110000008000000800007d0000
 00000000005050000000555060005000050060000000000065000500001000010011011100550000055000000100000100110111000055000000055000700000
 00000000066066000006506000006600066000000000000060000660055000550555055505550000550000005500005505550555000555000000555000000000
 090000000a0999a00a000000009000000a9000a00a0000000c0000000c0cccc00c00000000c000000cc000c00c00000000880880006666000008800000000000

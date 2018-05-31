@@ -63,6 +63,7 @@ function _init()
   --stealth = {neutral,evil,good}
   stealth = {0,-10,10}
   --blinking, offset = {standing,crouching}
+  blink_dur = 0.5
   eye_color = {7,8,7}
   eye_offset_y = {3,2}
   eye_offset_x = {3,4}
@@ -146,17 +147,6 @@ function _init()
  path2 = {48,-48}
  path3 = {16,-16}
 
- --instruction screen
- blink_dur = 0.5
- instr_spr = {}
- instr_spr.x = 10
- instr_spr.y = 10
- instr_spr.eye_offset_x = player.eye_offset_x
- instr_spr.eye_offset_y = player.eye_offset_y
- instr_spr.eye_gap = player.eye_gap
- instr_spr.eyes_open = true
- instr_spr.next_blink = player.next_blink
- instr_spr.eye_color = eye_color[1]
 end
 
 --[[
@@ -189,6 +179,13 @@ function new_level(x,y,toggled)
  enemy.attack_s = {12,11,13}
  player.shoot_animt = 0.5
  enemy.shoot_h = {6,6}
+ enemy.dead_stand_s = {132,135}
+ enemy.dead_flat_s = {149,133}
+ enemy.dead_flat_s_h = {1,1}
+ enemy.dead_flat_s_w = {2,2}
+ enemy.dead_flat_h = {8,8}
+ enemy.dead_flat_w = {16,16}
+ enemy.death_t = time()
  enemy.surprised = 46
  enemy.reload = 2 --time between shots
  enemy.shoot_speed = 20
@@ -229,6 +226,7 @@ function new_level(x,y,toggled)
  enemy[k].eye_offset_y
  enemy[k].eye_gap
  enemy[k].eye_color
+ enemy[k].on_ground, bool for death
  enemy.bullet[i].x
  enemy.bullet[i].y
  enemy.bullet[i].direction
@@ -440,7 +438,7 @@ player died, do this:
 ]]
 function player_die()
   player.is_dead = true
-  game = modes[3]
+  game = modes[4]
 end
 
 --[[
@@ -486,26 +484,28 @@ shoot an energy blast in the
 direction the player is facing
 ]]
 function shoot()
- local k = get_valid_blast()
- if k != 0 then
-  blast.prevt = time() --time at latest shot
-  blast[k] = {}
-  --find y of blast
-  if player.is_crouching then
-   blast[k].y = player.y
+  local k = get_valid_blast()
+  if k != 0 then
+    blast.prevt = time() --time at latest shot
+    blast[k] = {}
+    --find y of blast
+    if player.is_crouching then
+      blast[k].y = player.y
+    else
+      blast[k].y = player.y+4
+    end
+    if player.flipped then --left
+      blast[k].x = player.x-blast.w+1
+      blast[k].mx = -blast.speed
+      blast[k].flipped = true
+    else --right
+      blast[k].x = player.x+player.w-1
+      blast[k].mx = blast.speed
+      blast[k].flipped = false
+    end
   else
-   blast[k].y = player.y+4
+    sfx(34)
   end
-  if player.flipped then --left
-   blast[k].x = player.x-blast.w+1
-   blast[k].mx = -blast.speed
-   blast[k].flipped = true
-  else --right
-   blast[k].x = player.x+player.w-1
-   blast[k].mx = blast.speed
-   blast[k].flipped = false
-  end
- end
 end
 
 --[[
@@ -608,6 +608,7 @@ function make_enemy(kind,x,y,flipped,path)
   enemy[k].eye_offset_y = enemy.eye_offset_y[kind]
   enemy[k].eye_gap = enemy.eye_gap[kind]
   enemy[k].eye_color = enemy.eye_color[kind]
+  enemy[k].on_ground = false
 end
 
 --[[
@@ -616,47 +617,60 @@ k = enemy index
 ]]
 function move_enemy()
   for i=1,#enemy do
-    local dt = time() - enemy[i].prev_t
-    enemy[i].prev_t = time()
-    if enemy[i].path and --path exists
-       not enemy[i].sees_you and
-       not enemy[i].waiting then
-      local mt = time()-enemy[i].move_prevt
-      if mt >= enemy.move_animt then
-        enemy[i].move_prevt = time()
-        if enemy[i].s==enemy.s[enemy[i].kind] then
-          enemy[i].s = enemy.walk_s[enemy[i].kind]
-        else
-          enemy[i].s = enemy.s[enemy[i].kind]
+    if not enemy[i].is_dead then
+      local dt = time() - enemy[i].prev_t
+      enemy[i].prev_t = time()
+      if enemy[i].path and --path exists
+      not enemy[i].sees_you and
+      not enemy[i].waiting then
+        local mt = time()-enemy[i].move_prevt
+        if mt >= enemy.move_animt then
+          enemy[i].move_prevt = time()
+          if enemy[i].s==enemy.s[enemy[i].kind] then
+            enemy[i].s = enemy.walk_s[enemy[i].kind]
+          else
+            enemy[i].s = enemy.s[enemy[i].kind]
+          end
         end
-      end
-      local p = enemy[i].path_prog
-      local xdirection = 0
-      if enemy[i].path[p] < 0 then --facing left
-        enemy[i].flipped = false
-        xdirection = -1
-      else --facing right
-        enemy[i].flipped = true
-        xdirection = 1
-      end
-      local front = enemy[i].x-1
-      local y1 = enemy[i].y
-      local y2 = y1+enemy[i].h-1
-      if(enemy[i].flipped) front=enemy[i].x+enemy[i].w
-      if(not h_collide(front,y1,y2)) enemy[i].x += xdirection*enemy[i].speed*dt
-      if abs(enemy[i].x-enemy[i].prev_x)>=abs(enemy[i].path[p]) or
-         h_collide(front,y1,y2) then
-        enemy[i].wait_start = time()
-        enemy[i].waiting = true
-        enemy[i].path_prog = p % #enemy[i].path+1
-        enemy[i].prev_x = enemy[i].x
-      end
-    elseif enemy[i].waiting and
+        local p = enemy[i].path_prog
+        local xdirection = 0
+        if enemy[i].path[p] < 0 then --facing left
+          enemy[i].flipped = false
+          xdirection = -1
+        else --facing right
+          enemy[i].flipped = true
+          xdirection = 1
+        end
+        local front = enemy[i].x-1
+        local y1 = enemy[i].y
+        local y2 = y1+enemy[i].h-1
+        if(enemy[i].flipped) front=enemy[i].x+enemy[i].w
+        if(not h_collide(front,y1,y2)) enemy[i].x += xdirection*enemy[i].speed*dt
+        if abs(enemy[i].x-enemy[i].prev_x)>=abs(enemy[i].path[p]) or
+        h_collide(front,y1,y2) then
+          enemy[i].wait_start = time()
+          enemy[i].waiting = true
+          enemy[i].path_prog = p % #enemy[i].path+1
+          enemy[i].prev_x = enemy[i].x
+        end
+      elseif enemy[i].waiting and
         time()-enemy[i].wait_start>=enemy.wait then
-        enemy[i].waiting = false
-        enemy[i].s = enemy.s[enemy[i].kind]
-    end
-  end --end for
+          enemy[i].waiting = false
+          enemy[i].s = enemy.s[enemy[i].kind]
+      end
+    else --is dead
+      if time() > enemy[i].death_t and
+         not enemy[i].on_ground then
+        sfx(35)
+        enemy[i].on_ground = true
+        enemy[i].y += (enemy[i].s_h-enemy.dead_flat_s_h[enemy[i].kind])*8
+        enemy[i].s = enemy.dead_flat_s[enemy[i].kind]
+        enemy[i].s_h = enemy.dead_flat_s_h[enemy[i].kind]
+        enemy[i].s_w = enemy.dead_flat_s_w[enemy[i].kind]
+        enemy[i].h = enemy.dead_flat_h[enemy[i].kind]
+      end
+    end --end if
+  end --for
 end
 
 --[[
@@ -665,6 +679,13 @@ delete them
 ]]
 function kill_enemy(k)
  enemy[k].is_dead = true
+ enemy[k].s = enemy.dead_stand_s[enemy[k].kind]
+ enemy[k].death_t = time()+1
+ if player.x < enemy[k].x then
+   enemy[k].flipped = false
+ else
+   enemy[k].flipped = true
+ end
 end
 
 --[[
@@ -756,10 +777,8 @@ end
 
 function display_enemies()
   for i=1,#enemy do
-    if not enemy[i].is_dead then
-      spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h,enemy[i].flipped)
-      display_eyes(enemy[i])
-    end
+    spr(enemy[i].s,enemy[i].x,enemy[i].y,enemy[i].s_w,enemy[i].s_h,enemy[i].flipped)
+    if(not enemy[i].is_dead) display_eyes(enemy[i])
   end
 end
 
@@ -1011,7 +1030,7 @@ end
 
 function _update60()
   if game=="title" then --splash
-    if btn(4) then
+    if btnp(4) then
      game = modes[2]
     end
   elseif game=="instr" then --instructions
@@ -1100,11 +1119,13 @@ function _update60()
       player.speed = speed[player.morality][1] --walking speed
     end
     --shoot
-    if btnp(4) and
-       player.lvl_killc<kill_limit
-       then
-     shoot()
-    player.shoot_start = time()
+    if btnp(4) then
+      if player.lvl_killc<kill_limit then
+        shoot()
+        player.shoot_start = time()
+      else
+        sfx(34)
+      end
   end
 
   if time()-player.shoot_start<player.shoot_animt then
@@ -1128,7 +1149,7 @@ function _update60()
      player_die()
    end
  elseif game=="over" then --dead
-   if btn(4) then
+   if btnp(4) then
      _init()
    end
  end
@@ -1138,17 +1159,19 @@ function _draw()
   cls()
   if game=="title" then --splash
     spr(192,44,44,5,3)
+    print("a game about morality",20,70,6)
     print("press z to start",32,96,5)
   elseif game=="instr" then
-    spr(sprites[1][1],10,10,neutral_w[1],neutral_h[1])
-    display_eyes(instr_spr)
+    player.x = 10
+    player.y = 10
+        spr(player.s,player.x,player.y,player.s_w,player.s_h,true)
+    display_eyes(player)
     print(" this is you.",20,14,7)
     print("  ⬆️   to jump.",15,30,7)
     print("⬅️  ➡️ to move.",15,40,7)
     print("  ⬇️   to crouch.",15,50,7)
-    print("you can only kill 3 people.",10,70,7)
-    print("killing any more than that",10,80,7)
-    print("is just plain wrong.",10,90,7)
+    print("   z   to shoot.",15,60,7)
+    print("you can only kill 3 people.",10,80,7)
     print("press z to continue.",24,115,5)
   elseif game=="game" then --game
     display_map(lvl)
@@ -1232,10 +1255,10 @@ a04440a00a05555000444000004440000055550000449000507770500c0444405077700000777000
 050505550000000000000000000000000000000000000000000000000015d1000015d10000000000000000000000000000000000000000000000000000000000
 00555500004444400000044444000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00ffff50004444400000044444000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-005f5f00006446400000044444000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00ffff00004444400000044444000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00ffff00004444400000000440000000000444440000000000000000000055550000000000000000000000000000000000000000000000000000000000000000
 0000f0000000445500000044440000000004444400000000000000000005ffff0000000000000000000000000000000000000000000000000000000000000000
-004444400055555500000444444440000000440400000000004400500000f0f00000000000000000000000000000000000000000000000000000000000000000
+0044444000555555000004444444400000064464000000000044005000005f5f0000000000000000000000000000000000000000000000000000000000000000
 0404440405555555000044444400400000044444000001114444fff50000ffff0000000000000000000000000000000000000000000000000000000000000000
 04044404055055568888444440008000000004450551551144444ff5000000f00000000000000000000000000000000000000000000000000000000000000000
 5555555f666666668880444448888000040055550000000000000000000004440000000000000000000000000000000000000000000000000000000000000000
@@ -1471,6 +1494,7 @@ __sfx__
 010500000d050110501e050210500c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 010a000013476154770b473054730e671266730000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 010600001165434635000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+010c00002967029670056740467004675000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __music__
 03 03010244
 01 4105074e

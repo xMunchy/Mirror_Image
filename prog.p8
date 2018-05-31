@@ -6,16 +6,17 @@ __lua__
 
 --init
 function _init()
-  modes = {"title","game","over"}
-  game = modes[1]
   -- game variables --
+  modes = {"title","instr","game","over"}
+  game = modes[1]
+  menuitem(1,"switch level", function() toggle_level() end)
   prev_t = time()
   pot_kills = 0 --total potential kills
   kill_limit = 3 --per level
   nlvls = 2
   lvl = 1
   lvl_kill_cap = 3
-  x = {64,120}
+  x = {64,120} --player position by level
   y = {0,0}
 
   music(1)
@@ -100,7 +101,6 @@ function _init()
   player.eye_offset_x = eye_offset_x[1]
   player.eye_gap = 2
   player.next_blink = time() + flr(rnd(10)+1)
-  player.blink_dur = 0.5
   player.eyes_open = true
   player.eye_color = eye_color[player.morality]
   --particles
@@ -145,6 +145,18 @@ function _init()
  path1 = {120,-120}
  path2 = {48,-48}
  path3 = {16,-16}
+
+ --instruction screen
+ blink_dur = 0.5
+ instr_spr = {}
+ instr_spr.x = 10
+ instr_spr.y = 10
+ instr_spr.eye_offset_x = player.eye_offset_x
+ instr_spr.eye_offset_y = player.eye_offset_y
+ instr_spr.eye_gap = player.eye_gap
+ instr_spr.eyes_open = true
+ instr_spr.next_blink = player.next_blink
+ instr_spr.eye_color = eye_color[1]
 end
 
 --[[
@@ -191,7 +203,6 @@ function new_level(x,y,toggled)
  enemy.eye_offset_y = {2,2,1}
  enemy.eye_gap = {3,2,3}
  enemy.eye_color = {6,5,10}
- enemy.blink_dur = 0.5
  --[[ enemy attributes
  enemy[k].x
  enemy[k].y
@@ -294,6 +305,10 @@ function display_particle()
   end
 end
 
+function toggle_level()
+  lvl = (lvl+1)%(nlvls)
+  new_level(x[lvl+1],y[lvl+1],true)
+end
 -->8
 --player
 
@@ -749,8 +764,9 @@ function display_enemies()
 end
 
 --[[
-Display eyes, make blinking
+display eyes, make blinking
 ]]
+
 function display_eyes(entity)
   local x = entity.x
   local y = entity.y
@@ -766,7 +782,7 @@ function display_eyes(entity)
   if time() >= entity.next_blink then
     if entity.eyes_open then --blink
       entity.eyes_open = false
-      entity.next_blink = time() + enemy.blink_dur
+      entity.next_blink = time() + blink_dur
     else --open eyes
       entity.eyes_open = true
       entity.next_blink = time() + flr(rnd(10)+1)
@@ -994,13 +1010,17 @@ end
 --update and draw
 
 function _update60()
-  if game == modes[1] then --splash
+  if game=="title" then --splash
     if btn(4) then
      game = modes[2]
-     prev_t = time()
-     new_level(x[lvl+1],y[lvl+1],false)
     end
-  elseif game == modes[2] then
+  elseif game=="instr" then --instructions
+    if btnp(4) then
+      game=modes[3]
+      prev_t = time()
+      new_level(x[lvl+1],y[lvl+1],false)
+    end
+  elseif game=="game" then
     dt = time() - prev_t
     distance = flr(player.speed*dt)
     if(distance>0) prev_t = time()
@@ -1087,10 +1107,6 @@ function _update60()
     player.shoot_start = time()
   end
 
-  if btnp(5) then
-    lvl = (lvl+1)%(nlvls)
-    new_level(x[lvl+1],y[lvl+1],true)
-  end
   if time()-player.shoot_start<player.shoot_animt then
     if player.is_crouching then
       change_sprite(5)
@@ -1111,7 +1127,7 @@ function _update60()
    if player.hp<=0 then
      player_die()
    end
- elseif game==modes[3] then --dead
+ elseif game=="over" then --dead
    if btn(4) then
      _init()
    end
@@ -1120,10 +1136,21 @@ end
 
 function _draw()
   cls()
-  if game==modes[1] then --splash
+  if game=="title" then --splash
     spr(192,44,44,5,3)
     print("press z to start",32,96,5)
-  elseif game==modes[2] then --game
+  elseif game=="instr" then
+    spr(sprites[1][1],10,10,neutral_w[1],neutral_h[1])
+    display_eyes(instr_spr)
+    print("this is you.",20,14,7)
+    print(" ⬆️ to jump.",15,30,7)
+    print("⬅️➡️ to move.",15,40,7)
+    print(" ⬇️ to crouch.",15,50,7)
+    print("you can only kill 3 people.",10,70,7)
+    print("killing any more than that",10,80,7)
+    print("is just plain wrong.",10,90,7)
+    print("press z to continue.",24,115,5)
+  elseif game=="game" then --game
     display_map(lvl)
     display_enemies()
     enemy_check_range()
@@ -1133,7 +1160,7 @@ function _draw()
     spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
     display_eyes(player)
     display_particle()
-  elseif game==modes[3] then --game over
+  elseif game=="over" then --game over
     print("game over",48,60,8)
     print("press z to start again",20,70,8)
   end

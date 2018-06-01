@@ -1164,7 +1164,7 @@ function _draw()
   elseif game=="instr" then
     player.x = 10
     player.y = 10
-        spr(player.s,player.x,player.y,player.s_w,player.s_h,true)
+        spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
     display_eyes(player)
     print(" this is you.",20,14,7)
     print("  ⬆️   to jump.",15,30,7)

@@ -275,7 +275,6 @@ function spawn(lvl)
     make_enemy(2,24,80,true,path2)
     make_enemy(2,40,48,false,nopath)
     make_enemy(2,0,32,false,path3)
-    make_enemy(2,10,32,false,nopath)
   end
 end
 
@@ -311,13 +310,15 @@ function make_particle(x,y,dx,dy,source,color)
       i = #p+1
     end
     --make particle
-    p[i] = {}
-    p[i].x = x + rnd(rndx[source])
-    p[i].y = y - rnd(rndy[source])
-    p[i].dx = dx
-    p[i].dy = dy
-    p[i].lifespan = time() + p.lifespan[source]
-    p[i].color = color[flr(rnd(#color)+1)]
+    if color[flr(rnd(#color)+1)] then
+      p[i] = {}
+      p[i].x = x + rnd(rndx[source])
+      p[i].y = y - rnd(rndy[source])
+      p[i].dx = dx
+      p[i].dy = dy
+      p[i].lifespan = time() + p.lifespan[source]
+      p[i].color = color[flr(rnd(#color)+1)]
+    end
   end
 end
 

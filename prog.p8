@@ -13,7 +13,7 @@ function _init()
   prev_t = time()
   pot_kills = 0 --total potential kills
   kill_limit = 3 --per level
-  ratio = 0 -- tot_kills/pot_kills
+  --ratio = 0 -- tot_kills/pot_kills
   nlvls = 3
   lvl = -1
   lvl_kill_cap = 3
@@ -26,8 +26,10 @@ function _init()
 
   -- player static variables --
   player = {}
+  player.lvl_killc = 3
   player.max_hp = 10
-  morality = {1,2,3}
+  player.morality = 0
+  morality_sp = {1,2,3}
   --sprites = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
   neutral_sprites = {1,3,4,2,18,5,6}
   evil_sprites = {32,34,35,33,49,36,37}
@@ -72,12 +74,12 @@ function _init()
   eye_offset_x = {3,4}
   -- player current variables --
   player.is_dead = false
-  player.morality = morality[3]
-  player.s = sprites[player.morality][1] --sprite, idle
-  player.s_w = w[player.morality][1] --sprite size
-  player.s_h = h[player.morality][1]
-  player.w = pw[player.morality][1] --size by pixels
-  player.h = ph[player.morality][1]
+  player.morality_sp = morality_sp[3]
+  player.s = sprites[player.morality_sp][1] --sprite, idle
+  player.s_w = w[player.morality_sp][1] --sprite size
+  player.s_h = h[player.morality_sp][1]
+  player.w = pw[player.morality_sp][1] --size by pixels
+  player.h = ph[player.morality_sp][1]
   player.x = 0 --position
   player.y = 0
   player.hp = player.max_hp
@@ -87,7 +89,7 @@ function _init()
   player.speed = speed[1][1] --neutral walking
   player.stealth = stealth[3]
   player.is_crouching = false
-  player.tot_kills = 0 --total kills
+  --player.tot_kills = 0 --total kills
   player.is_stunned = false
   player.is_jumping = false
   player.can_triplej = false
@@ -106,7 +108,7 @@ function _init()
   player.eye_gap = 2
   player.next_blink = time() + flr(rnd(10)+1)
   player.eyes_open = true
-  player.eye_color = eye_color[player.morality]
+  player.eye_color = eye_color[player.morality_sp]
   --particles
   p = {}
   p.limit = 20
@@ -165,27 +167,29 @@ function new_level(toggled)
 else
   player.x = x[lvl+1]
   player.y = y[lvl+1]
-  player.s = sprites[player.morality][1] --idle --player.stand_s
+  player.s = sprites[player.morality_sp][1] --idle --player.stand_s
   if not toggled then
+    player.morality -= lvl_kill_cap - player.lvl_killc
     player.lvl_killc = 0
-    pot_kills += lvl_kill_cap
+    --pot_kills += lvl_kill_cap
   end
   music(16)
   if lvl==1 then --exiting tutorial, reset morality
-    player.tot_kills = 0
-    pot_kills = lvl_kill_cap
+    --player.tot_kills = 0
+    player.morality = 0
+    --pot_kills = lvl_kill_cap
     player.hp = player.max_hp
   end
-  ratio = player.tot_kills/pot_kills
-  if ratio > 0.5 then --make evil
-    player.morality = morality[2]
-  elseif ratio > 0.2 then --make neutral
-    player.morality = morality[1]
+  --ratio = player.tot_kills/pot_kills
+  if player.morality >= 3 then --make evil
+    player.morality_sp = morality_sp[2]
+  elseif player.morality > -3 then --make neutral
+    player.morality_sp = morality_sp[1]
   else --ratio < 0.2, make good
-    player.morality = morality[3]
+    player.morality_sp = morality_sp[3]
   end
-  player.stealth = stealth[player.morality]
-  player.eye_color = eye_color[player.morality]
+  player.stealth = stealth[player.morality_sp]
+  player.eye_color = eye_color[player.morality_sp]
   -- enemies --
   enemy = {} --kind 1 ez, 2 med, 3 hard
   enemy.s = {8,7,9} --idle sprites
@@ -271,6 +275,7 @@ function spawn(lvl)
     make_enemy(2,24,80,true,path2)
     make_enemy(2,40,48,false,nopath)
     make_enemy(2,0,32,false,path3)
+    make_enemy(2,10,32,false,nopath)
   end
 end
 
@@ -336,14 +341,14 @@ end
 change sprite, update sizes, x, y, speed
 ]]
 function change_sprite(id)
-  if(not player.is_hit) player.s = sprites[player.morality][id]
-  player.hit_prev_s = sprites[player.morality][id]
-  player.y += player.h-ph[player.morality][id]
-  player.x += player.w-pw[player.morality][id]
-  player.s_h = h[player.morality][id]
-  player.s_w = w[player.morality][id]
-  player.w = pw[player.morality][id]
-  player.h = ph[player.morality][id]
+  if(not player.is_hit) player.s = sprites[player.morality_sp][id]
+  player.hit_prev_s = sprites[player.morality_sp][id]
+  player.y += player.h-ph[player.morality_sp][id]
+  player.x += player.w-pw[player.morality_sp][id]
+  player.s_h = h[player.morality_sp][id]
+  player.s_w = w[player.morality_sp][id]
+  player.w = pw[player.morality_sp][id]
+  player.h = ph[player.morality_sp][id]
 end
 
 --can the player jump?
@@ -411,9 +416,10 @@ function kill(b,e)
   sfx(33)
   kill_blast(b)
   kill_enemy(e)
-  player.tot_kills += 1
+  --player.tot_kills += 1
+  player.morality += 1
   player.lvl_killc += 1
-  ratio = player.tot_kills/pot_kills
+  --ratio = player.tot_kills/pot_kills
 end
 
 --[[
@@ -586,11 +592,16 @@ function display_attr()
   pset(85,3,7) --good right eye
   pset(122,3,8) --bad left eye
   pset(124,3,8) --bad right eye
-  rectfill(88,3,98,5,12) --good bar
-  rectfill(98,3,104,5,3) --neutral bar
-  rectfill(104,3,120,5,8) --bad bar
+  -- rectfill(88,3,98,5,12) --good bar
+  -- rectfill(98,3,104,5,3) --neutral bar
+  -- rectfill(104,3,120,5,8) --bad bar
+  -- rect(88,2,120,6,2) --bar border
+  -- line((119-89)*ratio+89,3,(119-89)*ratio+89,5,9) --indicator
+  rectfill(89,3,98,5,12) --good bar
+  rectfill(99,3,109,5,3) --neutral bar
+  rectfill(110,3,119,5,8) --bad bar
   rect(88,2,120,6,2) --bar border
-  line((119-89)*ratio+89,3,(119-89)*ratio+89,5,9) --indicator
+  line(104+player.morality*5/3,3,104+player.morality*5/3,5,9) --indicator
 end
 
 function check_exit()
@@ -1120,12 +1131,12 @@ elseif game=="game" then
       if btn(0) or btn(1) then --crouch walking animation
         local mt = time()-player.move_prevt
         if mt >= player.move_animt or
-        player.s==sprites[player.morality][1] or
-        player.s==sprites[player.morality][2] or
-        player.s==sprites[player.morality][3]
+        player.s==sprites[player.morality_sp][1] or
+        player.s==sprites[player.morality_sp][2] or
+        player.s==sprites[player.morality_sp][3]
         then
           player.move_prevt = time()
-          if player.s==sprites[player.morality][4] then
+          if player.s==sprites[player.morality_sp][4] then
             change_sprite(5)
           else
             change_sprite(4)
@@ -1134,7 +1145,7 @@ elseif game=="game" then
       else
         change_sprite(4) --crouch idle
       end
-      player.speed = speed[player.morality][2] --crouching speed
+      player.speed = speed[player.morality_sp][2] --crouching speed
     elseif not v_collide(x1,x2-1,y1) then
       player.is_crouching = false
       --blinking
@@ -1147,11 +1158,11 @@ elseif game=="game" then
       elseif btn(0) or btn(1) then --is walking
         local mt = time()-player.move_prevt
         if mt >= player.move_animt or
-        player.s==sprites[player.morality][4] or
-        player.s==sprites[player.morality][5]
+        player.s==sprites[player.morality_sp][4] or
+        player.s==sprites[player.morality_sp][5]
         then
           player.move_prevt = time()
-          if player.s==sprites[player.morality][2] then
+          if player.s==sprites[player.morality_sp][2] then
             change_sprite(3)
           else
             change_sprite(2)
@@ -1161,16 +1172,16 @@ elseif game=="game" then
         --1 = idle
         change_sprite(1)
       end
-      player.speed = speed[player.morality][1] --walking speed
+      player.speed = speed[player.morality_sp][1] --walking speed
     end
     --shoot
     if btnp(4) then
-      if player.lvl_killc<kill_limit then
+      --if player.lvl_killc<kill_limit then
         shoot()
         player.shoot_start = time()
-      else
-        sfx(34)
-      end
+      --else
+        --sfx(34)
+      --end
   end
 
   if time()-player.shoot_start<player.shoot_animt then
@@ -1184,7 +1195,7 @@ elseif game=="game" then
    if(player.is_jumping) jump()
    if(player.is_stunned) stop_stun()
    if(player.is_hit) player_flash()
-   make_particle(player.x,player.y,0,-0.1,1,hair_colors[player.morality])
+   make_particle(player.x,player.y,0,-0.1,1,hair_colors[player.morality_sp])
    fall()
    move_blasts()
    enemy_move_bullet()

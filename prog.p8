@@ -13,6 +13,51 @@ function _init()
   prev_t = time()
   pot_kills = 0 --total potential kills
   kill_limit = 3 --per level
+  text_prevt = time() + rnd(10)
+  text_dur = 2
+  speaker = null
+  msg = null
+  enemy_is_talking = false
+  killtext_t = 0
+  killtext_dur = 2
+  killmsg = null
+  neutral_text = {
+          "HMM...",
+          ":(",
+          "...",
+          "?",
+          "WHERE...?",
+          "SHE'S NOT HERE",
+          "ANYONE?"
+  }
+  evil_text = {
+        "STOP HER!",
+        "KILLER!",
+        "STAY AWAY!",
+        "BE CAREFUL",
+        "KILL ON SIGHT",
+        "SHE'LL KILL US"
+  }
+  good_text = {
+        "POOR GIRL...",
+        "...",
+        "LIFE IS HARD",
+        "IT'S AN ORDER",
+        "NO CHOICE",
+        "WHO IS SHE",
+        "WHAT ARE WE DOING?"
+  }
+  text = {neutral_text,evil_text,good_text}
+  killed_text = {
+        "OH NO!",
+        "D:",
+        "JEFF!!",
+        "KYLE!!",
+        "AARON!!",
+        "KILLER!!",
+        "MAN DOWN!",
+        "CALL BACK UP!"
+  }
   --ratio = 0 -- tot_kills/pot_kills
   nlvls = 3
   lvl = -1
@@ -74,7 +119,7 @@ function _init()
   eye_offset_x = {3,4}
   -- player current variables --
   player.is_dead = false
-  player.morality_sp = morality_sp[3]
+  player.morality_sp = morality_sp[1]
   player.s = sprites[player.morality_sp][1] --sprite, idle
   player.s_w = w[player.morality_sp][1] --sprite size
   player.s_h = h[player.morality_sp][1]
@@ -86,7 +131,7 @@ function _init()
   player.flipped = false
   player.move_animt = 0.5
   player.move_prevt = 0
-  player.speed = speed[1][1] --neutral walking
+  player.speed = speed[player.morality_sp][1] --neutral walking
   player.stealth = stealth[3]
   player.is_crouching = false
   --player.tot_kills = 0 --total kills
@@ -95,6 +140,7 @@ function _init()
   player.can_triplej = false
   --shoot, do attacking animation
   player.shoot_start = 0
+  player.shoot_animt = 0.5
   --got hit, do flashing animation
   player.is_hit = false
   player.hit_start = 0
@@ -151,6 +197,73 @@ function _init()
  path1 = {120,-120}
  path2 = {48,-48}
  path3 = {16,-16}
+
+ --enemies
+ enemy_attr = {} --kind 1 ez, 2 med, 3 hard
+ enemy_attr.s = {8,7,9} --idle sprites
+ enemy_attr.s_w = {1,1,2} --sprite size
+ enemy_attr.s_h = {2,2,2}
+ enemy_attr.w = {7,7,12} --size by pixels
+ enemy_attr.h = {16,16,16}
+ enemy_attr.walk_s = {129,128,9} --walk sprites
+ enemy_attr.move_animt = 0.5
+ enemy_attr.speed = {16,16,32}
+ enemy_attr.range = {40,60,60}
+ enemy_attr.attack_s = {12,11,13}
+ enemy_attr.shoot_h = {6,6}
+ enemy_attr.dead_stand_s = {132,135}
+ enemy_attr.dead_flat_s = {149,133}
+ enemy_attr.dead_flat_s_h = {1,1}
+ enemy_attr.dead_flat_s_w = {2,2}
+ enemy_attr.dead_flat_h = {8,8}
+ enemy_attr.dead_flat_w = {16,16}
+ enemy_attr.death_t = time()
+ enemy_attr.surprised = 46
+ enemy_attr.reload = 2 --time between shots
+ enemy_attr.shoot_speed = 20
+ enemy_bullet = {}
+ enemy_bullet.s = 15 --sprite
+ enemy_bullet.s_h = 1 --size
+ enemy_bullet.s_w = 1
+ enemy_bullet.h = 2 --size by pixels
+ enemy_bullet.w = 2
+ enemy_attr.wait = 2 --wait between path steps and after seeing player
+ enemy_attr.eye_offset_x = {2,2,5}
+ enemy_attr.eye_offset_y = {2,2,1}
+ enemy_attr.eye_gap = {3,2,3}
+ enemy_attr.eye_color = {6,5,10}
+ --[[ enemy attributes
+ enemy[k].x
+ enemy[k].y
+ enemy[k].kind, 1 = easy, 2 = medium, 3 = hard
+ enemy[k].s, sprite
+ enemy[k].s_w, size
+ enemy[k].s_h
+ enemy[k].w, size by pixels
+ enemy[k].h
+ enemy[k].flipped, bool
+ enemy[k].is_dead, bool
+ enemy[k].speed
+ enemy[k].sees_you, bool, sees player
+ enemy[k].range, vision range
+ enemy[k].prev_shot, for reload time
+ enemy[k].path, path to move along
+ enemy[k].path_prog, progress of movement in path
+ enemy[k].wait_start
+ enemy[k].waiting
+ enemy[k].attack_s, attack sprite
+ enemy[k].next_blink, time blinks
+ enemy[k].eyes_open
+ enemy[k].eye_offset_x
+ enemy[k].eye_offset_y
+ enemy[k].eye_gap
+ enemy[k].eye_color
+ enemy[k].on_ground, bool for death
+ enemy_bullet[i].x
+ enemy_bullet[i].y
+ enemy_bullet[i].direction
+ enemy_bullet[i].prevt, for moving bullet
+ ]]
 end
 
 --[[
@@ -191,72 +304,7 @@ else
   player.stealth = stealth[player.morality_sp]
   player.eye_color = eye_color[player.morality_sp]
   -- enemies --
-  enemy = {} --kind 1 ez, 2 med, 3 hard
-  enemy.s = {8,7,9} --idle sprites
-  enemy.s_w = {1,1,2} --sprite size
-  enemy.s_h = {2,2,2}
-  enemy.w = {7,7,12} --size by pixels
-  enemy.h = {16,16,16}
-  enemy.walk_s = {129,128,9} --walk sprites
-  enemy.move_animt = 0.5
-  enemy.speed = {16,16,32}
-  enemy.range = {40,60,60}
-  enemy.attack_s = {12,11,13}
-  player.shoot_animt = 0.5
-  enemy.shoot_h = {6,6}
-  enemy.dead_stand_s = {132,135}
-  enemy.dead_flat_s = {149,133}
-  enemy.dead_flat_s_h = {1,1}
-  enemy.dead_flat_s_w = {2,2}
-  enemy.dead_flat_h = {8,8}
-  enemy.dead_flat_w = {16,16}
-  enemy.death_t = time()
-  enemy.surprised = 46
-  enemy.reload = 2 --time between shots
-  enemy.shoot_speed = 20
-  enemy.bullet = {}
-  enemy.bullet.s = 15 --sprite
-  enemy.bullet.s_h = 1 --size
-  enemy.bullet.s_w = 1
-  enemy.bullet.h = 2 --size by pixels
-  enemy.bullet.w = 2
-  enemy.wait = 2 --wait between path steps and after seeing player
-  enemy.eye_offset_x = {2,2,5}
-  enemy.eye_offset_y = {2,2,1}
-  enemy.eye_gap = {3,2,3}
-  enemy.eye_color = {6,5,10}
-  --[[ enemy attributes
-  enemy[k].x
-  enemy[k].y
-  enemy[k].kind, 1 = easy, 2 = medium, 3 = hard
-  enemy[k].s, sprite
-  enemy[k].s_w, size
-  enemy[k].s_h
-  enemy[k].w, size by pixels
-  enemy[k].h
-  enemy[k].flipped, bool
-  enemy[k].is_dead, bool
-  enemy[k].speed
-  enemy[k].sees_you, bool, sees player
-  enemy[k].range, vision range
-  enemy[k].prev_shot, for reload time
-  enemy[k].path, path to move along
-  enemy[k].path_prog, progress of movement in path
-  enemy[k].wait_start
-  enemy[k].waiting
-  enemy[k].attack_s, attack sprite
-  enemy[k].next_blink, time blinks
-  enemy[k].eyes_open
-  enemy[k].eye_offset_x
-  enemy[k].eye_offset_y
-  enemy[k].eye_gap
-  enemy[k].eye_color
-  enemy[k].on_ground, bool for death
-  enemy.bullet[i].x
-  enemy.bullet[i].y
-  enemy.bullet[i].direction
-  enemy.bullet[i].prevt, for moving bullet
-  ]]
+  enemy = {}
   spawn(lvl) --spawn enemies
 end
 end
@@ -417,6 +465,19 @@ function kill(b,e)
   sfx(33)
   kill_blast(b)
   kill_enemy(e)
+  killtext_t = time() + killtext_dur
+  killspeaker = null
+  for i=1,#enemy do
+    if not enemy[i].is_dead then
+      killspeaker = flr(rnd(#enemy))+1
+      while enemy[killspeaker].is_dead do
+        killspeaker = flr(rnd(#enemy))+1
+      end
+      break
+    end
+  end
+  killmsg = killed_text[flr(rnd(#killed_text))+1]
+  enemy_dialogue()
   --player.tot_kills += 1
   player.morality += 1
   player.lvl_killc += 1
@@ -629,18 +690,18 @@ function make_enemy(kind,x,y,flipped,path)
   enemy[k].x = x
   enemy[k].y = y
   enemy[k].kind = kind --1 ez, 2 med, 3 hard
-  enemy[k].s = enemy.s[kind] --sprite
-  enemy[k].s_w = enemy.s_w[kind] --size
-  enemy[k].s_h = enemy.s_h[kind]
-  enemy[k].w = enemy.w[kind]
-  enemy[k].h = enemy.h[kind]
+  enemy[k].s = enemy_attr.s[kind] --sprite
+  enemy[k].s_w = enemy_attr.s_w[kind] --size
+  enemy[k].s_h = enemy_attr.s_h[kind]
+  enemy[k].w = enemy_attr.w[kind]
+  enemy[k].h = enemy_attr.h[kind]
   enemy[k].prev_t = time()
   enemy[k].flipped = flipped
   enemy[k].is_dead = false
-  enemy[k].speed = enemy.speed[kind]
+  enemy[k].speed = enemy_attr.speed[kind]
   enemy[k].sees_you = false
-  enemy[k].range = enemy.range[kind]
-  enemy[k].shoot_h = enemy.shoot_h[kind]
+  enemy[k].range = enemy_attr.range[kind]
+  enemy[k].shoot_h = enemy_attr.shoot_h[kind]
   enemy[k].prev_shot = 0
   enemy[k].path = path
   enemy[k].path_prog = 1
@@ -648,14 +709,14 @@ function make_enemy(kind,x,y,flipped,path)
   enemy[k].prev_y = enemy[k].y
   enemy[k].waiting = false
   enemy[k].is_jumping = false
-  enemy[k].attack_s = enemy.attack_s[kind]
+  enemy[k].attack_s = enemy_attr.attack_s[kind]
   enemy[k].move_prevt = time()
   enemy[k].next_blink = time()+flr(rnd(10)+1)
   enemy[k].eyes_open = true
-  enemy[k].eye_offset_x = enemy.eye_offset_x[kind]
-  enemy[k].eye_offset_y = enemy.eye_offset_y[kind]
-  enemy[k].eye_gap = enemy.eye_gap[kind]
-  enemy[k].eye_color = enemy.eye_color[kind]
+  enemy[k].eye_offset_x = enemy_attr.eye_offset_x[kind]
+  enemy[k].eye_offset_y = enemy_attr.eye_offset_y[kind]
+  enemy[k].eye_gap = enemy_attr.eye_gap[kind]
+  enemy[k].eye_color = enemy_attr.eye_color[kind]
   enemy[k].on_ground = false
 end
 
@@ -672,12 +733,12 @@ function move_enemy()
       not enemy[i].sees_you and
       not enemy[i].waiting then
         local mt = time()-enemy[i].move_prevt
-        if mt >= enemy.move_animt then
+        if mt >= enemy_attr.move_animt then
           enemy[i].move_prevt = time()
-          if enemy[i].s==enemy.s[enemy[i].kind] then
-            enemy[i].s = enemy.walk_s[enemy[i].kind]
+          if enemy[i].s==enemy_attr.s[enemy[i].kind] then
+            enemy[i].s = enemy_attr.walk_s[enemy[i].kind]
           else
-            enemy[i].s = enemy.s[enemy[i].kind]
+            enemy[i].s = enemy_attr.s[enemy[i].kind]
           end
         end
         local p = enemy[i].path_prog
@@ -702,20 +763,20 @@ function move_enemy()
           enemy[i].prev_x = enemy[i].x
         end
       elseif enemy[i].waiting and
-        time()-enemy[i].wait_start>=enemy.wait then
+        time()-enemy[i].wait_start>=enemy_attr.wait then
           enemy[i].waiting = false
-          enemy[i].s = enemy.s[enemy[i].kind]
+          enemy[i].s = enemy_attr.s[enemy[i].kind]
       end
     else --is dead
       if time() > enemy[i].death_t and
          not enemy[i].on_ground then
         sfx(35)
         enemy[i].on_ground = true
-        enemy[i].y += (enemy[i].s_h-enemy.dead_flat_s_h[enemy[i].kind])*8
-        enemy[i].s = enemy.dead_flat_s[enemy[i].kind]
-        enemy[i].s_h = enemy.dead_flat_s_h[enemy[i].kind]
-        enemy[i].s_w = enemy.dead_flat_s_w[enemy[i].kind]
-        enemy[i].h = enemy.dead_flat_h[enemy[i].kind]
+        enemy[i].y += (enemy[i].s_h-enemy_attr.dead_flat_s_h[enemy[i].kind])*8
+        enemy[i].s = enemy_attr.dead_flat_s[enemy[i].kind]
+        enemy[i].s_h = enemy_attr.dead_flat_s_h[enemy[i].kind]
+        enemy[i].s_w = enemy_attr.dead_flat_s_w[enemy[i].kind]
+        enemy[i].h = enemy_attr.dead_flat_h[enemy[i].kind]
       end
     end --end if
   end --for
@@ -727,7 +788,7 @@ delete them
 ]]
 function kill_enemy(k)
  enemy[k].is_dead = true
- enemy[k].s = enemy.dead_stand_s[enemy[k].kind]
+ enemy[k].s = enemy_attr.dead_stand_s[enemy[k].kind]
  enemy[k].death_t = time()+1
  if player.x < enemy[k].x then
    enemy[k].flipped = false
@@ -759,47 +820,47 @@ end
 
 function enemy_shoot(k)
   local dt = time() - enemy[k].prev_shot
-  if dt < enemy.reload then return 0 end
+  if dt < enemy_attr.reload then return 0 end
   enemy[k].prev_shot = time()
   --find valid bullet
   local valid = 0
-  for i=1,#enemy.bullet do
-    if enemy.bullet[i].y < 0 then
+  for i=1,#enemy_bullet do
+    if enemy_bullet[i].y < 0 then
       valid = i
       break
     end
   end
   if valid==0 then
-    valid = #enemy.bullet+1
+    valid = #enemy_bullet+1
   end
   --start shot
-  enemy.bullet[valid] = {}
-  enemy.bullet[valid].y = enemy[k].y+enemy[k].shoot_h
-  enemy.bullet[valid].prevt = time()
+  enemy_bullet[valid] = {}
+  enemy_bullet[valid].y = enemy[k].y+enemy[k].shoot_h
+  enemy_bullet[valid].prevt = time()
   if enemy[k].flipped then
-    enemy.bullet[valid].x = enemy[k].x+enemy[k].w
-    enemy.bullet[valid].direction = 1
+    enemy_bullet[valid].x = enemy[k].x+enemy[k].w
+    enemy_bullet[valid].direction = 1
   else
-    enemy.bullet[valid].x = enemy[k].x
-    enemy.bullet[valid].direction = -1
+    enemy_bullet[valid].x = enemy[k].x
+    enemy_bullet[valid].direction = -1
   end
 end
 
 function enemy_move_bullet()
-  for i=1,#enemy.bullet do
-    if not (enemy.bullet[i].y < 0) then
-      local dt = time() - enemy.bullet[i].prevt
-      enemy.bullet[i].prevt = time()
-      enemy.bullet[i].x += enemy.bullet[i].direction*enemy.shoot_speed*dt
-      if enemy.bullet[i].x > 130 or enemy.bullet[i].x < -4 then
+  for i=1,#enemy_bullet do
+    if not (enemy_bullet[i].y < 0) then
+      local dt = time() - enemy_bullet[i].prevt
+      enemy_bullet[i].prevt = time()
+      enemy_bullet[i].x += enemy_bullet[i].direction*enemy_attr.shoot_speed*dt
+      if enemy_bullet[i].x > 130 or enemy_bullet[i].x < -4 then
         kill_bullet(i)
       end--end if
     end--end if
     --check collision
-    local x1 = enemy.bullet[i].x
-    local x2 = enemy.bullet[i].x+enemy.bullet.w-1
-    local y1 = enemy.bullet[i].y
-    local y2 = enemy.bullet[i].y+enemy.bullet.h-1
+    local x1 = enemy_bullet[i].x
+    local x2 = enemy_bullet[i].x+enemy_bullet.w-1
+    local y1 = enemy_bullet[i].y
+    local y2 = enemy_bullet[i].y+enemy_bullet.h-1
     local x3 = player.x
     local x4 = player.x+player.w-1
     local y3 = player.y
@@ -814,12 +875,40 @@ function enemy_move_bullet()
 end
 
 function kill_bullet(i)
-  enemy.bullet[i].y = -100
+  enemy_bullet[i].y = -100
+end
+
+function enemy_dialogue()
+  if time() >= text_prevt then
+    if not enemy_is_talking then --speak
+      enemy_is_talking = true
+      text_prevt = time() + text_dur
+      speaker = flr(rnd(#enemy))+1
+      msg = text[player.morality_sp][flr(rnd(#text[player.morality_sp]))+1]
+    else --stop talking
+      enemy_is_talking = false
+      text_prevt = time() + rnd(10)+5
+      msg = null
+      speaker = null
+    end
+  end
+  if enemy_is_talking and
+      not enemy[speaker].is_dead and
+      not enemy[speaker].sees_you then
+    print(msg,enemy[speaker].x+4-2*#msg,enemy[speaker].y-6,6)
+  end
+  if time() < killtext_t and
+      killspeaker and
+      killspeaker != speaker then
+    print(killmsg,enemy[killspeaker].x+4-2*#killmsg,enemy[killspeaker].y-6,6)
+    enemy[killspeaker].wait_start = time()
+    enemy[killspeaker].waiting = true
+  end
 end
 
 function display_enemy_bullet()
-  for i=1,#enemy.bullet do
-    spr(enemy.bullet.s,enemy.bullet[i].x,enemy.bullet[i].y,enemy.bullet.s_h,enemy.bullet.s_w)
+  for i=1,#enemy_bullet do
+    spr(enemy_bullet.s,enemy_bullet[i].x,enemy_bullet[i].y,enemy_bullet.s_h,enemy_bullet.s_w)
   end
 end
 
@@ -870,18 +959,18 @@ function enemy_check_range()
       local y3 = enemy[i].y
       local y4 = y3+enemy[i].h-1
       --determine x values of vision box
-      local box1 = enemy[i].x-enemy[i].range+player.stealth
-      local box2 = enemy[i].x+enemy[i].w/2
+      local x3 = enemy[i].x-enemy[i].range+player.stealth
+      local x4 = enemy[i].x+enemy[i].w/2
       if enemy[i].flipped then
-        box1 = enemy[i].x+0.5*enemy[i].w
-        box2 = box1+enemy[i].range-player.stealth
+        x3 = enemy[i].x+0.5*enemy[i].w
+        x4 = x3+enemy[i].range-player.stealth
       end
       --rect(box1,y3,box2,y4,5)
-      if is_inside(x1,x2,y1,y2,box1,box2,y3,y4) then
+      if is_inside(x1,x2,y1,y2,x3,x4,y3,y4) then
         enemy_notice(x1,x2,i)
       end
       if enemy[i].sees_you and enemy[i].waiting then
-        spr(enemy.surprised,enemy[i].x,enemy[i].y-10) --! exclamation mark
+        spr(enemy_attr.surprised,enemy[i].x,enemy[i].y-10) --! exclamation mark
         enemy[i].s = enemy[i].attack_s --attack sprite
       else
         enemy[i].sees_you = false
@@ -1177,12 +1266,12 @@ elseif game=="game" then
     end
     --shoot
     if btnp(4) then
-      --if player.lvl_killc<kill_limit then
+      if player.lvl_killc<kill_limit then
         shoot()
         player.shoot_start = time()
-      --else
-        --sfx(34)
-      --end
+      else
+        sfx(34)
+      end
   end
 
   if time()-player.shoot_start<player.shoot_animt then
@@ -1253,6 +1342,7 @@ elseif game=="game" then --game
     spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
     display_eyes(player)
     display_particle()
+    enemy_dialogue()
   elseif game=="over" then --game over
     print("game over",48,60,8)
     print("press z to start again",20,70,8)

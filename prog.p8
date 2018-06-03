@@ -571,14 +571,35 @@ function display_attr()
       spr(health_sp[2],(i-1)*8,2)
     end
   end
-  for i=1,blast.limit do
-    if (not blast[i] or --if blast[i] doesn't exist
-       blast[i].y < 0) and
-       player.lvl_killc<kill_limit then --blast[i] is done
-      spr(blast_sp[1],(blast.limit-i)*8,10)
+  --kill limit
+  for i=1,kill_limit do
+    if i <= kill_limit-player.lvl_killc then
+      spr(blast_sp[1],(i-1)*8,8)
     else
-      spr(blast_sp[2],(blast.limit-i)*8,10)
+      spr(blast_sp[2],(i-1)*8,8)
     end
+  end
+  --morality bar
+  spr(sprites[3][1],80,0,1,1) --show good head
+  spr(sprites[2][1],120,0,1,1,true) --show bad head
+  pset(83,3,7) --good left eye
+  pset(85,3,7) --good right eye
+  pset(122,3,8) --bad left eye
+  pset(124,3,8) --bad right eye
+  rectfill(88,3,98,5,12) --good bar
+  rectfill(98,3,104,5,3) --neutral bar
+  rectfill(104,3,120,5,8) --bad bar
+  rect(88,2,120,6,2) --bar border
+  line((119-89)*ratio+89,3,(119-89)*ratio+89,5,9) --indicator
+end
+
+function check_exit()
+  local x1 = player.x
+  local x2 = player.x+player.w-1
+  local y1 = player.y
+  local y2 = player.y+player.h-1
+  if is_inside(exit_x[lvl+1],exit_x[lvl+1],exit_y[lvl+1],exit_y[lvl+1],x1,x2,y1,y2) then
+    new_level(false)
   end
 end
 
@@ -1046,14 +1067,15 @@ function _update60()
   if game=="title" then --splash
     if btnp(4) then
      game = modes[2]
+     new_level(false)
     end
-  elseif game=="instr" then --instructions
-    if btnp(4) then
-      game=modes[3]
-      prev_t = time()
-      new_level(x[lvl+1],y[lvl+1],false)
-    end
-  elseif game=="game" then
+  -- elseif game=="instr" then --instructions
+  --   if btnp(4) then
+  --     game=modes[3]
+  --     prev_t = time()
+  --     new_level(x[lvl+1],y[lvl+1],false)
+  --   end
+elseif game=="game" then
     dt = time() - prev_t
     distance = flr(player.speed*dt)
     if(distance>0) prev_t = time()

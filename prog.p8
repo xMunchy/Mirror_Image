@@ -893,6 +893,7 @@ function enemy_dialogue()
     end
   end
   if enemy_is_talking and
+      speaker and --speaker exists
       not enemy[speaker].is_dead and
       not enemy[speaker].sees_you then
     print(msg,enemy[speaker].x+4-2*#msg,enemy[speaker].y-6,6)
@@ -1342,7 +1343,7 @@ elseif game=="game" then --game
     spr(player.s,player.x,player.y,player.s_w,player.s_h,player.flipped)
     display_eyes(player)
     display_particle()
-    enemy_dialogue()
+    if(#enemy>0) enemy_dialogue()
   elseif game=="over" then --game over
     print("game over",48,60,8)
     print("press z to start again",20,70,8)

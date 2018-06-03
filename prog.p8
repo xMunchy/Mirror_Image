@@ -1088,16 +1088,20 @@ function _update60()
       start_jump()
     end
     -- crouch
-    if btn(3) and
-       not player.is_stunned or
-       player.is_crouching and v_collide(x1,x2-1,y1-1) then
+    if btn(3) or
+       player.is_crouching and v_collide(x1,x2-1,y1-1) or
+       v_collide(x1,x2-1,y1) then
       player.is_crouching = true
       --blinking
       player.eye_offset_y = eye_offset_y[2]
       player.eye_offset_x = eye_offset_x[2]
-      if btn(0) or btn(1) then --crouch walking
+      if btn(0) or btn(1) then --crouch walking animation
         local mt = time()-player.move_prevt
-        if mt >= player.move_animt then
+        if mt >= player.move_animt or
+        player.s==sprites[player.morality][1] or
+        player.s==sprites[player.morality][2] or
+        player.s==sprites[player.morality][3]
+        then
           player.move_prevt = time()
           if player.s==sprites[player.morality][4] then
             change_sprite(5)
@@ -1120,7 +1124,10 @@ function _update60()
         change_sprite(6)
       elseif btn(0) or btn(1) then --is walking
         local mt = time()-player.move_prevt
-        if mt >= player.move_animt then
+        if mt >= player.move_animt or
+        player.s==sprites[player.morality][4] or
+        player.s==sprites[player.morality][5]
+        then
           player.move_prevt = time()
           if player.s==sprites[player.morality][2] then
             change_sprite(3)

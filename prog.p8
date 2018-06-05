@@ -328,6 +328,7 @@ function new_level(toggled,dir,back)
       if(lvl==12) lvl=11
       player.y = 120
     else --not branching
+      if(lvl==3) player.lvl_killc = 0
       lvl += 1
       if(x[lvl]!=-1) player.x = x[lvl]
       if(y[lvl]!=-1) player.y = y[lvl]

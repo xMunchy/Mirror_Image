@@ -80,7 +80,7 @@ function _init()
 
   -- player static variables --
   player = {}
-  player.lvl_killc = {0,0,0,0,0,0,0,0,0,0,0,0}
+  player.lvl_killc = 0
   visited = {}
   player.max_hp = 10
   player.morality = 0
@@ -294,11 +294,10 @@ function new_level(toggled,dir,back)
     if lvl==2 then --entering game, exiting tutorial, reset morality
       player.morality = 0
       player.hp = player.max_hp
+      player.lvl_killc = 0
     elseif lvl==1 then --start morality tutorial
-      player.morality = -5
-    end
-    if not dir and lvl>2 then
-      player.morality -= lvl_kill_cap - player.lvl_killc[lvl]
+      player.morality = -3
+      player.lvl_killc = 0
     end
     --determine level based on morality
     branch = update_morality()
@@ -306,12 +305,17 @@ function new_level(toggled,dir,back)
       lvl -= 1
       player.x = 120
     elseif lvl==4 or lvl==6 then --branching
+      player.morality -= lvl_kill_cap - player.lvl_killc
       if branch=="good" then
         lvl = 7
+        player.lvl_killc = 0
       elseif branch=="neutral" then
         lvl = 5
+        player.lvl_killc = 0
+        spawn()
       else --branch = evil
         lvl = 10
+        player.lvl_killc = 0
       end
       player.x = x[lvl]
       player.y = y[lvl]
@@ -328,8 +332,6 @@ function new_level(toggled,dir,back)
       if(x[lvl]!=-1) player.x = x[lvl]
       if(y[lvl]!=-1) player.y = y[lvl]
     end
-    if(visited[l]) player.morality += lvl_kill_cap - player.lvl_killc[l]
-    visited[l] = true
     player.s = sprites[player.morality_sp][1] --idle --player.stand_s
   end
 end
@@ -460,16 +462,16 @@ end
 
 function update_morality()
   --make sure not out of bounds
-  if(player.morality > 15) player.morality = 15
-  if(player.morality < -15) player.morality = -15
+  if(player.morality > 9) player.morality = 9
+  if(player.morality < -9) player.morality = -9
   local m = null
-  if player.morality >= 5 then --make evil
+  if player.morality >= 3 then --make evil
     player.morality_sp = morality_sp[2]
     m = "evil"
-  elseif player.morality > -5 then --make neutral
+  elseif player.morality > -3 then --make neutral
     player.morality_sp = morality_sp[1]
     m = "neutral"
-  elseif player.morality <= -5 then --make good
+  elseif player.morality <= -3 then --make good
     player.morality_sp = morality_sp[3]
     m = "good"
   end
@@ -557,7 +559,7 @@ function kill(b,e)
   killmsg = killed_text[flr(rnd(#killed_text))+1]
   enemy_dialogue()
   player.morality += 1
-  player.lvl_killc[lvl] += 1
+  player.lvl_killc += 1
   if(levels[lvl]==19) player.morality+=4 update_morality()
 end
 
@@ -701,7 +703,7 @@ function display_attr()
   end
   --kill limit
   for i=1,kill_limit do
-    if i <= kill_limit-player.lvl_killc[lvl] then
+    if i <= kill_limit-player.lvl_killc then
       spr(blast_sp[1],(i-1)*8,8)
     else
       spr(blast_sp[2],(i-1)*8,8)
@@ -717,7 +719,7 @@ function display_attr()
   rectfill(89,3,98,5,12) --good bar
   rectfill(99,3,109,5,3) --neutral bar
   rectfill(110,3,119,5,8) --bad bar
-  line(104+player.morality,3,104+player.morality,5,9) --indicator
+  line(104+player.morality*5/3,3,104+player.morality*5/3,5,9) --indicator
   local mbar_dt = time() - mbar_prevt
   if mbar_dt>=2 and lvl==2 then --flash bar
     mbar_prevt = time()
@@ -1329,7 +1331,7 @@ elseif game=="game" then
     end
     --shoot
     if btnp(4) then
-      if player.lvl_killc[lvl]<kill_limit then
+      if player.lvl_killc<kill_limit then
         shoot()
         player.shoot_start = time()
       else

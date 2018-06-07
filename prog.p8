@@ -1478,7 +1478,7 @@ end
 function _draw()
   cls()
   if game=="title" then --splash
-    spr(192,44,44,5,3)
+    sspr(0,94,40,34,24,10,80,68)
     print("a game about morality",20,70,6)
     print("press ❎ to start",32,96,5)
   -- elseif game=="instr" then
@@ -1883,4 +1883,3 @@ __music__
 03 1c424344
 03 1c1d1d1e
 03 26246744
-

@@ -343,6 +343,7 @@ function new_level(toggled,dir,back)
   else
     angels = angels.." remains"
   end
+  if(lvl==2) angels = "end of tutorial"
   if lvl==2 or lvl==3 then
     lvl_transition += 1
     if not toggled then

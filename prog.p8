@@ -7,6 +7,7 @@ __lua__
 --init
 function _init()
   -- game variables --
+  music(1)
   modes = {"title","game","over"}
   game = modes[1]
   menuitem(1,"switch level", function() toggle_level() end)
@@ -21,6 +22,9 @@ function _init()
   y = {104,24,96,104,104,-1,88,-1,0,88,-1,0}
   lvl_switched = false
   lvl_dt = 0
+  lvl_transition = 0
+  lvl_transition_dur = 3
+  lvl_transition_t = 0
   text_prevt = time() + rnd(10)
   text_dur = 2
   speaker = null
@@ -29,6 +33,11 @@ function _init()
   killtext_t = 0
   killtext_dur = 2
   killmsg = null
+  killed_speaker = null
+  killed_speakt = -1
+  killed_speak_dur = 2
+  killed_msg = null
+
   neutral_text = {
           "hmm...",
           ":|",
@@ -63,21 +72,32 @@ function _init()
   }
   text = {neutral_text,evil_text,good_text}
   killed_text = {
-        "oh no!",
+        "no!",
         "d:",
         "jeff!!",
         "kyle!!",
         "aaron!!",
+        "andy!!",
+        "jack!!",
+        "bill!!",
+        "bob!!",
         "killer!!",
         "man down!",
-        "mayday!",
-        "help!",
+        "backup!",
+        "noooo!",
         "no!!",
-        "why?",
         "stop!"
   }
-
-  music(1)
+  just_died_text = {
+      "augh!",
+      "eugh!",
+      "hnnngh",
+      "oh",
+      "rip",
+      "gah!",
+      "hello darkness my old friend",
+      "my leg!"
+  }
 
   -- player static variables --
   player = {}
@@ -199,6 +219,22 @@ function _init()
  blast.wait = 0.5 --time between blasts
  blast.prevt = 0
 
+ --floats around player, indicates ammo
+ blast_belt = {{},{},{}}
+ blast_belt[1].x = -7
+ blast_belt[1].y = 0
+ blast_belt[1].pos = 0
+ blast_belt[2].x = -3
+ blast_belt[2].y = -5
+ blast_belt[2].pos = 1
+ blast_belt[3].x = 4
+ blast_belt[3].y = 3
+ blast_belt[3].pos = 2
+ blast_belt.positions = {-1,0,1,0,-1}
+ blast_belt.t = 0
+ blast_belt.dur = 0.5
+ blast_belt.switched = false
+
  --paths for enemies to travel
  path1 = {120,-120}
  path2 = {48,-48}
@@ -294,10 +330,9 @@ function new_level(toggled,dir,back)
   if lvl==2 then --entering game, exiting tutorial, reset morality
     player.morality = 0
     player.hp = player.max_hp
-    player.lvl_killc = 0
   elseif lvl==1 then --start morality tutorial
     player.morality = -3
-    player.lvl_killc = 0
+    if(not toggled) player.lvl_killc = 0
   end
   --determine level based on morality
   branch = update_morality()
@@ -305,18 +340,20 @@ function new_level(toggled,dir,back)
     lvl -= 1
     player.x = 120
   elseif lvl==4 or lvl==6 then --branching
-    player.morality -= lvl_kill_cap - player.lvl_killc
     if branch=="good" then
       lvl = 7
-      player.lvl_killc = 0
     elseif branch=="neutral" then
       lvl = 5
-      player.lvl_killc = 0
       spawn()
     else --branch = evil
       lvl = 10
-      player.lvl_killc = 0
     end
+    if not toggled then
+      player.morality -= lvl_kill_cap - player.lvl_killc
+      player.lvl_killc = 0
+      lvl_transition_t = time() + lvl_transition_dur
+    end
+    lvl_transition += 1
     player.x = x[lvl]
     player.y = y[lvl]
   elseif dir=="down" then --falling
@@ -328,14 +365,22 @@ function new_level(toggled,dir,back)
     if(lvl==12) lvl=11
     player.y = 120
   else --not branching
-    if(lvl==3) player.lvl_killc = 0
     lvl += 1
     if(x[lvl]!=-1) player.x = x[lvl]
     if(y[lvl]!=-1) player.y = y[lvl]
+    if lvl==3 or lvl==4 then
+      lvl_transition += 1
+      if not toggled then
+        player.morality -= lvl_kill_cap - player.lvl_killc
+        player.lvl_killc = 0
+        lvl_transition_t = time() + lvl_transition_dur
+      end
+    end
   end
   for i=1,#enemy[lvl] do --reset move timer for enemies
-    enemy[lvl][i].move_prevt = time()
+    enemy[lvl][i].prev_t = time()
   end
+  update_morality()
   player.s = sprites[player.morality_sp][1] --idle --player.stand_s
 end
 
@@ -345,7 +390,6 @@ spawn enemies for each level
 function spawn()
   enemy = {}
   enemy[1] = {} --tutorial p1
-  make_enemy(1,50,16,false,nopath)
   make_enemy(1,110,16,false,nopath)
   enemy[2] = {} --tutorial p2
   make_enemy(1,96,24,false,nopath)
@@ -561,10 +605,14 @@ function kill(b,e)
     end
   end
   killmsg = killed_text[flr(rnd(#killed_text))+1]
+
+  killed_speaker = enemy[lvl][e]
+  killed_speakt = time() + killed_speak_dur
+  killed_msg = just_died_text[flr(rnd(#just_died_text))+1]
   enemy_dialogue()
   player.morality += 1
   player.lvl_killc += 1
-  if(levels[lvl]==19) player.morality+=4 update_morality()
+  if(levels[lvl]==19) player.morality+=2 update_morality()
 end
 
 --[[
@@ -698,19 +746,53 @@ function display_blasts()
 end
 
 function display_attr()
-  for i=1,player.max_hp do
+  for i=1,player.max_hp do --hp
     if i<= player.hp then
       spr(health_sp[1],(i-1)*8,2)
     else
       spr(health_sp[2],(i-1)*8,2)
     end
   end
+  -- --kill limit
+  -- for i=1,kill_limit do
+  --   if i <= kill_limit-player.lvl_killc then
+  --     spr(blast_sp[1],(i-1)*8,8)
+  --   else
+  --     spr(blast_sp[2],(i-1)*8,8)
+  --   end
+  -- end
   --kill limit
-  for i=1,kill_limit do
+  if time() >= blast_belt.t and not blast_belt.switched then
+    blast_belt.t = time() + blast_belt.dur
+    blast_belt.switched = true
+    for i=1,#blast_belt do
+      blast_belt[i].addx = rnd(2)-1
+      blast_belt[i].addy = rnd(2)-1
+    end
+  elseif blast_belt.switched and
+         time() >= blast_belt.t then
+    blast_belt.switched = false
+    blast_belt.t = time() + blast_belt.dur
+    for i=1,#blast_belt do
+      blast_belt[i].addx = 0
+      blast_belt[i].addy = 0
+    end
+  end
+  if player.flipped then
+    blast_belt[1].x = 7 + blast_belt[1].addx
+    blast_belt[2].x = 3 + blast_belt[2].addx
+    blast_belt[3].x = -4 + blast_belt[3].addx
+  else
+    blast_belt[1].x = -7 + blast_belt[1].addx
+    blast_belt[2].x = -3 + blast_belt[2].addx
+    blast_belt[3].x = 4 + blast_belt[3].addx
+  end
+  blast_belt[1].y = blast_belt[1].addy
+  blast_belt[2].y = -6 + blast_belt[2].addy
+  blast_belt[3].y = -4 + blast_belt[3].addy
+  for i=1,#blast_belt do
     if i <= kill_limit-player.lvl_killc then
-      spr(blast_sp[1],(i-1)*8,8)
-    else
-      spr(blast_sp[2],(i-1)*8,8)
+      spr(blast_sp[1],player.x+blast_belt[i].x,player.y+blast_belt[i].y)
     end
   end
   --morality bar
@@ -746,6 +828,14 @@ function check_exit()
     new_level(false,"up")
   else
     lvl_switched = false
+  end
+  --also, check for heart collectible cause why not
+  if mget(player.x/8+16*(levels[lvl]%8),player.y/8+flr(levels[lvl]/8)*16)==44 then
+    mset(player.x/8+16*(levels[lvl]%8),player.y/8+flr(levels[lvl]/8)*16,0)
+    player.hp +=1
+  elseif mget(player.x/8+16*(levels[lvl]%8),(player.y+8)/8+flr(levels[lvl]/8)*16)==44 then
+    mset(player.x/8+16*(levels[lvl]%8),(player.y+8)/8+flr(levels[lvl]/8)*16,0)
+    player.hp +=1
   end
 end
 
@@ -978,6 +1068,9 @@ function enemy_dialogue()
     print(killmsg,enemy[lvl][killspeaker].x+4-2*#killmsg,enemy[lvl][killspeaker].y-6,6)
     enemy[lvl][killspeaker].wait_start = time()
     enemy[lvl][killspeaker].waiting = true
+  end
+  if time() < killed_speakt then
+    print(killed_msg,killed_speaker.x+4-2*#killed_msg,killed_speaker.y-6,6)
   end
 end
 
@@ -1253,7 +1346,12 @@ function _update60()
   --     prev_t = time()
   --     new_level(x[lvl+1],y[lvl+1],false)
   --   end
-elseif game=="game" then
+  elseif time() < lvl_transition_t then
+    prev_t = time()
+    for i=1,#enemy[lvl] do
+      enemy[lvl][i].prev_t = time()
+    end
+  elseif game=="game" then
     dt = time() - prev_t
     distance = flr(player.speed*dt)
     if(distance>0) prev_t = time()
@@ -1395,7 +1493,10 @@ function _draw()
   --   print("   z   to shoot.",15,60,7)
   --   print("you can only kill 3 people.",10,80,7)
   --   print("press z to continue.",24,115,5)
-elseif game=="game" then --game
+  elseif time() < lvl_transition_t then
+    local m = "level "..lvl_transition
+    print(m,64-2*#m,60,7)
+  elseif game=="game" then --game
     display_map()
     if levels[lvl]==0 then --tutorial level
       print(" move",20,82,5)

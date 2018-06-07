@@ -19,7 +19,8 @@ function _init()
   --player position by level. if -1, then current position
   x = {8,0,0,0,0,0,0,0,-1,0,0,-1}
   y = {104,40,96,104,104,-1,88,-1,0,88,-1,0}
-  lvl_dt = time()
+  lvl_switched = false
+  lvl_dt = 0
   text_prevt = time() + rnd(10)
   text_dur = 2
   speaker = null
@@ -283,58 +284,56 @@ potk: potential kills for this map.
 reboots enemies as well.
 ]]
 function new_level(toggled,dir,back)
-  if time()-lvl_dt>1 or game!="game" or toggled then
-    lvl_dt = time()
-    local l = lvl
-    enemy_is_talking = false
-    killspeaker = null
-    for i=1,#enemy_bullet do --delete bullets
-      enemy_bullet[i].y = -100
-    end
-    if lvl==2 then --entering game, exiting tutorial, reset morality
-      player.morality = 0
-      player.hp = player.max_hp
-      player.lvl_killc = 0
-    elseif lvl==1 then --start morality tutorial
-      player.morality = -3
-      player.lvl_killc = 0
-    end
-    --determine level based on morality
-    branch = update_morality()
-    if back then
-      lvl -= 1
-      player.x = 120
-    elseif lvl==4 or lvl==6 then --branching
-      player.morality -= lvl_kill_cap - player.lvl_killc
-      if branch=="good" then
-        lvl = 7
-        player.lvl_killc = 0
-      elseif branch=="neutral" then
-        lvl = 5
-        player.lvl_killc = 0
-        spawn()
-      else --branch = evil
-        lvl = 10
-        player.lvl_killc = 0
-      end
-      player.x = x[lvl]
-      player.y = y[lvl]
-    elseif dir=="down" then --falling
-      if(lvl==7) lvl = 9
-      if(lvl==11) lvl=12
-      player.y = -4
-    elseif dir=="up" then --jumping
-      if(lvl==9) lvl = 7
-      if(lvl==12) lvl=11
-      player.y = 120
-    else --not branching
-      if(lvl==3) player.lvl_killc = 0
-      lvl += 1
-      if(x[lvl]!=-1) player.x = x[lvl]
-      if(y[lvl]!=-1) player.y = y[lvl]
-    end
-    player.s = sprites[player.morality_sp][1] --idle --player.stand_s
+  lvl_switched = true
+  local l = lvl
+  enemy_is_talking = false
+  killspeaker = null
+  for i=1,#enemy_bullet do --delete bullets
+    enemy_bullet[i].y = -100
   end
+  if lvl==2 then --entering game, exiting tutorial, reset morality
+    player.morality = 0
+    player.hp = player.max_hp
+    player.lvl_killc = 0
+  elseif lvl==1 then --start morality tutorial
+    player.morality = -3
+    player.lvl_killc = 0
+  end
+  --determine level based on morality
+  branch = update_morality()
+  if back then
+    lvl -= 1
+    player.x = 120
+  elseif lvl==4 or lvl==6 then --branching
+    player.morality -= lvl_kill_cap - player.lvl_killc
+    if branch=="good" then
+      lvl = 7
+      player.lvl_killc = 0
+    elseif branch=="neutral" then
+      lvl = 5
+      player.lvl_killc = 0
+      spawn()
+    else --branch = evil
+      lvl = 10
+      player.lvl_killc = 0
+    end
+    player.x = x[lvl]
+    player.y = y[lvl]
+  elseif dir=="down" then --falling
+    if(lvl==7) lvl = 9
+    if(lvl==11) lvl=12
+    player.y = -4
+  elseif dir=="up" then --jumping
+    if(lvl==9) lvl = 7
+    if(lvl==12) lvl=11
+    player.y = 120
+  else --not branching
+    if(lvl==3) player.lvl_killc = 0
+    lvl += 1
+    if(x[lvl]!=-1) player.x = x[lvl]
+    if(y[lvl]!=-1) player.y = y[lvl]
+  end
+  player.s = sprites[player.morality_sp][1] --idle --player.stand_s
 end
 
 --[[
@@ -733,13 +732,15 @@ end
 
 function check_exit()
   if mget(player.x/8+16*(levels[lvl]%8),player.y/8+flr(levels[lvl]/8)*16)==31 then
-    new_level(false)
+    if(not lvl_switched) new_level(false)
   elseif mget(player.x/8+16*(levels[lvl]%8),player.y/8+flr(levels[lvl]/8)*16)==47 then
-    new_level(false,null,true)
+    if(not lvl_switched) new_level(false,null,true)
   elseif player.y>128 then
     new_level(false,"down")
   elseif player.y<-4 then
     new_level(false,"up")
+  else
+    lvl_switched = false
   end
 end
 
@@ -1236,7 +1237,7 @@ end
 
 function _update60()
   if game=="title" then --splash
-    if btnp(4) then
+    if btnp(5) then
      new_level(false)
      game = "game"
      music(16)
@@ -1331,7 +1332,7 @@ elseif game=="game" then
       player.speed = speed[player.morality_sp][1] --walking speed
     end
     --shoot
-    if btnp(4) then
+    if btnp(5) then
       if player.lvl_killc<kill_limit then
         shoot()
         player.shoot_start = time()
@@ -1361,7 +1362,7 @@ elseif game=="game" then
      player_die()
    end
  elseif game=="over" then --dead
-   if btnp(4) then
+   if btnp(5) then
      _init()
      game = "game"
      lvl = 2
@@ -1376,7 +1377,7 @@ function _draw()
   if game=="title" then --splash
     spr(192,44,44,5,3)
     print("a game about morality",20,70,6)
-    print("press z to start",32,96,5)
+    print("press ❎ to start",32,96,5)
   -- elseif game=="instr" then
   --   player.x = 10
   --   player.y = 10
@@ -1402,7 +1403,7 @@ elseif game=="game" then --game
       print("crouch",60,45,5)
       print("  ⬇️  ",60,52,5)
       print("shoot",28,10,5)
-      print("  z  ",28,18,5)
+      print("  ❎  ",28,18,5)
     elseif levels[lvl]==19 then --morality tutorial
       print("morality is physical",24,80,5)
       print("start!",104,16,5)
@@ -1418,7 +1419,7 @@ elseif game=="game" then --game
     if(#enemy[lvl]>0) enemy_dialogue()
   elseif game=="over" then --game over
     print("game over",48,60,8)
-    print("press z to start again",20,70,8)
+    print("press ❎ to start again",20,70,8)
   end
 end
 __gfx__

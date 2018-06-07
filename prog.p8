@@ -286,8 +286,8 @@ reboots enemies as well.
 function new_level(toggled,dir,back)
   lvl_switched = true
   local l = lvl
-  enemy_is_talking = false
-  killspeaker = null
+  enemy_is_talking = false --stop talking
+  killspeaker = null --stop talking
   for i=1,#enemy_bullet do --delete bullets
     enemy_bullet[i].y = -100
   end
@@ -332,6 +332,9 @@ function new_level(toggled,dir,back)
     lvl += 1
     if(x[lvl]!=-1) player.x = x[lvl]
     if(y[lvl]!=-1) player.y = y[lvl]
+  end
+  for i=1,#enemy[lvl] do --reset move timer for enemies
+    enemy[lvl][i].move_prevt = time()
   end
   player.s = sprites[player.morality_sp][1] --idle --player.stand_s
 end

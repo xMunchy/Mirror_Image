@@ -109,29 +109,29 @@ function _init()
   morality_sp = {1,2,3}
   mbar_prevt = time()
   mbar_flash_dur = 1
-  --sprites = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
-  neutral_sprites = {1,3,4,2,18,5,6}
-  evil_sprites = {32,34,35,33,49,36,37}
-  good_sprites = {38,40,41,39,55,42,43}
+  --sprites = {idle,walk1,walk2,crouch_idle,crouch_move,jump1,jump2,attack}
+  neutral_sprites = {1,3,4,2,18,5,160,6}
+  evil_sprites = {32,34,35,33,49,36,160,37}
+  good_sprites = {38,40,41,39,55,42,160,43}
   sprites = {neutral_sprites,evil_sprites,good_sprites}
   --size by 8x8 chunks
   --size = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
-  neutral_w = {1,1,1,1,1,1,1}
-  neutral_h = {2,2,2,1,1,2,2}
-  evil_w = {1,1,1,1,1,1,1}
-  evil_h = {2,2,2,1,1,2,2}
-  good_w = {1,1,1,1,1,1,1}
-  good_h = {2,2,2,1,1,2,2}
+  neutral_w = {1,1,1,1,1,1,1,1}
+  neutral_h = {2,2,2,1,1,2,2,2}
+  evil_w = {1,1,1,1,1,1,1,1}
+  evil_h = {2,2,2,1,1,2,2,2}
+  good_w = {1,1,1,1,1,1,1,1}
+  good_h = {2,2,2,1,1,2,2,2}
   w = {neutral_w,evil_w,good_w}
   h = {neutral_h,evil_h,good_h}
   --size by pixels
   --size = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
-  neutral_pw = {8,8,8,8,8,8,8}
-  neutral_ph = {16,16,16,8,8,16,16}
-  evil_pw = {8,8,8,8,8,8,8}
-  evil_ph = {16,16,16,8,8,16,16}
-  good_pw = {8,8,8,8,8,8,8}
-  good_ph = {16,16,16,8,8,16,16}
+  neutral_pw = {8,8,8,8,8,8,8,8}
+  neutral_ph = {16,16,16,8,8,16,16,16}
+  evil_pw = {8,8,8,8,8,8,8,8}
+  evil_ph = {16,16,16,8,8,16,16,16}
+  good_pw = {8,8,8,8,8,8,8,8}
+  good_ph = {16,16,16,8,8,16,16,16}
   pw = {neutral_pw,evil_pw,good_pw}
   ph = {neutral_ph,evil_ph,good_ph}
   --speed = {walking, crouching, jumping}
@@ -1426,7 +1426,11 @@ function _update60()
        --falling
       if not v_collide(x1,x2,y2) then
         --6 = jumping/falling
-        change_sprite(6)
+        if player.jump_prog<8 then
+          change_sprite(7)
+        else
+          change_sprite(6)
+        end
       elseif btn(0) or btn(1) then --is walking
         local mt = time()-player.move_prevt
         if mt >= player.move_animt or
@@ -1460,7 +1464,7 @@ function _update60()
     if player.is_crouching then
       change_sprite(5)
     else
-      change_sprite(7)
+      change_sprite(8)
     end
   end
 
@@ -1524,6 +1528,7 @@ function _draw()
     line(68+player.prev_morality*5/3,83,68+player.prev_morality*5/3,85,9) --indicator
   elseif game=="game" then --game
     display_map()
+    print(player.jump_prog,0,120,7)
     if levels[lvl]==0 then --tutorial level
       print(" move",20,82,5)
       print("⬅️  ➡️",20,90,5)

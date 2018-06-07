@@ -640,11 +640,11 @@ function shoot()
       blast[k].y = player.y+4
     end
     if player.flipped then --left
-      blast[k].x = player.x-blast.w+1
+      blast[k].x = player.x-blast.w/2
       blast[k].mx = -blast.speed
       blast[k].flipped = true
     else --right
-      blast[k].x = player.x+player.w-1
+      blast[k].x = player.x+player.w/2
       blast[k].mx = blast.speed
       blast[k].flipped = false
     end
@@ -662,10 +662,10 @@ function move_blasts()
   --move only valid blasts
   if blast[i].y>0 then
    blast[i].x += blast[i].mx
-   --check wall collision
-   blast_hit_wall(i)
    --check enemy collision
    blast_hit(i)
+   --check wall collision
+   blast_hit_wall(i)
   end--end if
  end--end for
 end
@@ -1403,7 +1403,7 @@ elseif game=="game" then --game
       print("crouch",60,45,5)
       print("  ⬇️  ",60,52,5)
       print("shoot",28,10,5)
-      print("  ❎  ",28,18,5)
+      print(" ❎  ",28,18,5)
     elseif levels[lvl]==19 then --morality tutorial
       print("morality is physical",24,80,5)
       print("start!",104,16,5)

@@ -1495,9 +1495,9 @@ end
 function _draw()
   cls()
   if game=="title" then --splash
-    sspr(0,96,40,34,24,10,80,68)
-    print("a game about morality",20,70,6)
-    print("press ❎ to start",32,96,5)
+    sspr(0,96,40,34,24,26,80,68)
+    print("a game about morality",22,80,6)
+    print("press ❎ to start",32,106,5)
   -- elseif game=="instr" then
   --   player.x = 10
   --   player.y = 10

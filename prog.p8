@@ -783,8 +783,8 @@ function display_attr()
   end
   for i=1,#blast_belt do
     if blast_belt[i].is_dead then
-      blast_belt[i].x -= 1
-      blast_belt[i].y -= 0.1
+      blast_belt[i].x -= 0.5
+      blast_belt[i].y -= 1
     else
       blast_belt[i].x = player.x + dir*blast_belt.x[i] + blast_belt[i].addx
       blast_belt[i].y = player.y + blast_belt.y[i] + blast_belt[i].addy

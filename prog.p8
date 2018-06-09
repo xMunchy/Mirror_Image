@@ -1154,7 +1154,7 @@ function fall()
   local y = player.y+player.h
   local x1 = player.x
   local x2 = player.x+player.w-1
-  if v_collide(x1,x2,y) then
+  if v_collide(x1,x2,y) and player.m<0 then
     player.njump = 0
     player.m = 0
     if v_collide(x1,x2,y-0.5) then

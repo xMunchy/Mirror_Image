@@ -220,16 +220,17 @@ function _init()
 
  --floats around player, indicates ammo
  blast_belt = {{},{},{}}
+ blast_belt.x = {7,3,-4}
+ blast_belt.y = {0,-6,-4}
  blast_belt[1].x = -7
  blast_belt[1].y = 0
- blast_belt[1].pos = 0
+ blast_belt[1].is_dead = false
  blast_belt[2].x = -3
  blast_belt[2].y = -5
- blast_belt[2].pos = 1
+ blast_belt[2].is_dead = false
  blast_belt[3].x = 4
  blast_belt[3].y = 3
- blast_belt[3].pos = 2
- blast_belt.positions = {-1,0,1,0,-1}
+ blast_belt[3].is_dead = false
  blast_belt.t = 0
  blast_belt.dur = 0.5
  blast_belt.switched = false
@@ -326,6 +327,9 @@ function new_level(toggled,dir,back)
   sorrow_speaker = null --stop talking
   for i=1,#enemy_bullet do --delete bullets
     enemy_bullet[i].y = -100
+  end
+  for i=1,#blast_belt do --reset angels
+    blast_belt[i].is_dead = false
   end
   if lvl==2 then --entering game, exiting tutorial, reset morality
     player.morality = 0
@@ -607,13 +611,13 @@ function kill(b,e)
     end
   end
   sorrow_msg = sorrow_text[flr(rnd(#sorrow_text))+1]
-
   killed_speaker = enemy[lvl][e]
   killed_t = time() + killed_dur
   killed_msg = killed_text[flr(rnd(#killed_text))+1]
   enemy_dialogue()
   player.morality += 1
   player.lvl_killc += 1
+  blast_belt[kill_limit-player.lvl_killc+1].is_dead = true
   if(levels[lvl]==19) player.morality+=2 update_morality()
 end
 
@@ -756,14 +760,6 @@ function display_attr()
       spr(health_sp[2],(i-1)*8,2)
     end
   end
-  -- --kill limit
-  -- for i=1,kill_limit do
-  --   if i <= kill_limit-player.lvl_killc then
-  --     spr(angel_sp[1],(i-1)*8,8)
-  --   else
-  --     spr(angel_sp[2],(i-1)*8,8)
-  --   end
-  -- end
   --kill limit
   if time() >= blast_belt.t and not blast_belt.switched then
     blast_belt.t = time() + blast_belt.dur
@@ -781,22 +777,19 @@ function display_attr()
       blast_belt[i].addy = 0
     end
   end
-  if player.flipped then
-    blast_belt[1].x = 7 + blast_belt[1].addx
-    blast_belt[2].x = 3 + blast_belt[2].addx
-    blast_belt[3].x = -4 + blast_belt[3].addx
-  else
-    blast_belt[1].x = -7 + blast_belt[1].addx
-    blast_belt[2].x = -3 + blast_belt[2].addx
-    blast_belt[3].x = 4 + blast_belt[3].addx
+  local dir = 1
+  if not player.flipped then
+    dir = -1
   end
-  blast_belt[1].y = blast_belt[1].addy
-  blast_belt[2].y = -6 + blast_belt[2].addy
-  blast_belt[3].y = -4 + blast_belt[3].addy
   for i=1,#blast_belt do
-    if i <= kill_limit-player.lvl_killc then
-      spr(angel_sp[1],player.x+blast_belt[i].x,player.y+blast_belt[i].y)
+    if blast_belt[i].is_dead then
+      blast_belt[i].x -= 1
+      blast_belt[i].y -= 0.1
+    else
+      blast_belt[i].x = player.x + dir*blast_belt.x[i] + blast_belt[i].addx
+      blast_belt[i].y = player.y + blast_belt.y[i] + blast_belt[i].addy
     end
+    spr(angel_sp[1],blast_belt[i].x,blast_belt[i].y)
   end
   --morality bar
   spr(sprites[3][1],80,0,1,1) --show good head
@@ -1509,16 +1502,16 @@ function _draw()
     for i=1,kill_diff do
       sspr(104,24,8,8,64-(kill_diff)*9+(i-1)*18,60,16,16)
     end
-    spr(sprites[3][1],44,80,1,1) --show good head
-    spr(sprites[2][1],84,80,1,1,true) --show bad head
-    pset(47,83,7) --good left eye
-    pset(49,83,7) --good right eye
-    pset(86,83,8) --bad left eye
-    pset(88,83,8) --bad right eye
-    rectfill(53,83,62,85,12) --good bar
-    rectfill(63,83,73,85,3) --neutral bar
-    rectfill(74,83,83,85,8) --bad bar
-    line(68+player.prev_morality*5/3,83,68+player.prev_morality*5/3,85,9) --indicator
+    spr(sprites[3][1],40,80,1,1) --show good head
+    spr(sprites[2][1],80,80,1,1,true) --show bad head
+    pset(43,83,7) --good left eye
+    pset(45,83,7) --good right eye
+    pset(82,83,8) --bad left eye
+    pset(84,83,8) --bad right eye
+    rectfill(49,83,58,85,12) --good bar
+    rectfill(59,83,69,85,3) --neutral bar
+    rectfill(70,83,79,85,8) --bad bar
+    line(64+player.prev_morality*5/3,83,64+player.prev_morality*5/3,85,9) --indicator
   elseif game=="game" then --game
     display_map()
     if levels[lvl]==0 then --tutorial level

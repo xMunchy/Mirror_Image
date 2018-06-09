@@ -7,38 +7,40 @@ __lua__
 --init
 function _init()
   -- game variables --
-  music(1)
+  music(1) --bg music
   modes = {"title","game","over"}
-  game = modes[1]
-  menuitem(1,"switch level", function() toggle_level() end)
-  prev_t = time()
-  pot_kills = 0 --total potential kills
+  game = modes[1] --game mode
+  menuitem(1,"switch level", function() toggle_level() end) --add lvl toggle to menu
+  prev_t = time() --for character movement
   kill_limit = 3 --per level
   levels = {0,19,1,2,8,9,10,11,18,3,4,12} --level ids
   lvl = 0 --index of levels
-  lvl_kill_cap = 3
   --player position by level. if -1, then current position
   x = {8,0,0,0,0,0,0,0,-1,0,0,-1}
   y = {104,24,96,104,104,-1,88,-1,0,88,-1,0}
-  lvl_switched = false
-  lvl_dt = 0
-  lvl_transition = 0
-  lvl_transition_dur = 5
-  lvl_transition_t = 0
-  text_prevt = time() + rnd(10)
-  text_dur = 2
-  speaker = null
-  msg = null
-  enemy_is_talking = false
-  killtext_t = 0
-  killtext_dur = 2
-  killmsg = null
-  killed_speaker = null
-  killed_speakt = -1
-  killed_speak_dur = 2
-  killed_msg = null
-
-  neutral_text = {
+  lvl_switched = false --changed levels recently
+  --transition screen between lvls
+  lvl_transition = 0 --next level
+  lvl_transition_dur = 5 --duration of screen
+  lvl_transition_t = 0 --timer
+  --enemy dialogue, idle
+  text_prevt = time() + rnd(10) --timer
+  text_dur = 2 --duration
+  speaker = null --enemy speaking
+  msg = null --text to display
+  enemy_is_talking = false --currently talking
+  --enemy dialogue, reaction to companion's death
+  sorrow_t = 0 --timer
+  sorrow_dur = 2 --duration
+  sorrow_speaker = null --speaker
+  sorrow_msg = null --msg to display
+  --death cry of recently killed
+  killed_speaker = null --speaker
+  killed_t = 0 --timer
+  killed_dur = 2 --duration
+  killed_msg = null --msg to display
+  --enemy dialogue
+  neutral_text = { --when player is neutral
           "hmm...",
           ":|",
           "...",
@@ -48,7 +50,7 @@ function _init()
           "hello?",
           "tired"
   }
-  evil_text = {
+  evil_text = { --when player is evil
         "stop her!",
         "killer!",
         "stay away!",
@@ -60,7 +62,7 @@ function _init()
         "):",
         "monster!"
   }
-  good_text = {
+  good_text = { --when player is good
         "poor girl...",
         "...",
         "life is hard",
@@ -71,7 +73,7 @@ function _init()
         "ugh"
   }
   text = {neutral_text,evil_text,good_text}
-  killed_text = {
+  sorrow_text = { --oh no my friend died
         "no!",
         "d:",
         "jeff!!",
@@ -88,7 +90,7 @@ function _init()
         "no!!",
         "stop!"
   }
-  just_died_text = {
+  killed_text = { --oh no I just died text
       "augh!",
       "eugh!",
       "hnnngh",
@@ -102,13 +104,12 @@ function _init()
   -- player static variables --
   player = {}
   player.lvl_killc = 0
-  visited = {}
   player.max_hp = 10
   player.morality = 0
-  player.prev_morality = 0
-  morality_sp = {1,2,3}
-  mbar_prevt = time()
-  mbar_flash_dur = 1
+  player.prev_morality = 0 --for morality bar animation
+  morality_sp = {1,2,3} --id
+  mbar_prevt = time() --timer for morality bar animation
+  mbar_flash_dur = 1 --duration of flashing
   --sprites = {idle,walk1,walk2,crouch_idle,crouch_move,jump1,jump2,attack}
   neutral_sprites = {1,3,4,2,18,5,160,6}
   evil_sprites = {32,34,35,33,49,36,161,37}
@@ -142,8 +143,8 @@ function _init()
   --attribute sprites
   --health_sp = {full,empty}
   health_sp = {44,60}
-  --blast_sp = {full,empty}
-  blast_sp = {45,61}
+  --angel_sp = {small,big}
+  angel_sp = {45,61}
   --stealth = {neutral,evil,good}
   stealth = {0,-10,10}
   --blinking, offset = {standing,crouching}
@@ -152,8 +153,7 @@ function _init()
   eye_offset_y = {3,2}
   eye_offset_x = {3,4}
   -- player current variables --
-  player.is_dead = false
-  player.morality_sp = morality_sp[1]
+  player.morality_sp = morality_sp[1] --morality stage
   player.s = sprites[player.morality_sp][1] --sprite, idle
   player.s_w = w[player.morality_sp][1] --sprite size
   player.s_h = h[player.morality_sp][1]
@@ -163,8 +163,8 @@ function _init()
   player.y = 0
   player.hp = player.max_hp
   player.flipped = false
-  player.move_animt = 0.5
-  player.move_prevt = 0
+  player.move_animt = 0.5 --walking animation duration
+  player.move_prevt = 0 --walking timer
   player.speed = speed[player.morality_sp][1] --neutral walking
   player.stealth = stealth[3]
   player.is_crouching = false
@@ -320,9 +320,10 @@ reboots enemies as well.
 ]]
 function new_level(toggled,dir,back)
   lvl_switched = true
+  player.m = 0
   local l = lvl
   enemy_is_talking = false --stop talking
-  killspeaker = null --stop talking
+  sorrow_speaker = null --stop talking
   for i=1,#enemy_bullet do --delete bullets
     enemy_bullet[i].y = -100
   end
@@ -334,7 +335,7 @@ function new_level(toggled,dir,back)
     if(not toggled) player.lvl_killc = 0
   end
   player.prev_morality = player.morality
-  kill_diff = lvl_kill_cap-player.lvl_killc
+  kill_diff = kill_limit-player.lvl_killc
   angels = kill_diff.." angel"
   if kill_diff != 1 then
     angels = angels.."s remain"
@@ -345,7 +346,7 @@ function new_level(toggled,dir,back)
   if lvl==2 or lvl==3 then
     lvl_transition += 1
     if not toggled then
-      player.morality -= lvl_kill_cap - player.lvl_killc
+      player.morality -= kill_limit - player.lvl_killc
       player.lvl_killc = 0
       lvl_transition_t = time() + lvl_transition_dur
     end
@@ -358,7 +359,7 @@ function new_level(toggled,dir,back)
     game = "end"
   elseif lvl==4 or lvl==6 then --branching
     if not toggled then
-      player.morality -= lvl_kill_cap - player.lvl_killc
+      player.morality -= kill_limit - player.lvl_killc
       player.lvl_killc = 0
       lvl_transition_t = time() + lvl_transition_dur
     end
@@ -595,22 +596,21 @@ function kill(b,e)
   sfx(33)
   kill_blast(b)
   kill_enemy(e)
-  killtext_t = time() + killtext_dur
-  killspeaker = null
+  sorrow_t = time() + sorrow_dur
   for i=1,#enemy[lvl] do
     if not enemy[lvl][i].is_dead then
-      killspeaker = flr(rnd(#enemy[lvl]))+1
-      while enemy[lvl][killspeaker].is_dead do
-        killspeaker = flr(rnd(#enemy[lvl]))+1
+      sorrow_speaker = flr(rnd(#enemy[lvl]))+1
+      while enemy[lvl][sorrow_speaker].is_dead do
+        sorrow_speaker = flr(rnd(#enemy[lvl]))+1
       end
       break
     end
   end
-  killmsg = killed_text[flr(rnd(#killed_text))+1]
+  sorrow_msg = sorrow_text[flr(rnd(#sorrow_text))+1]
 
   killed_speaker = enemy[lvl][e]
-  killed_speakt = time() + killed_speak_dur
-  killed_msg = just_died_text[flr(rnd(#just_died_text))+1]
+  killed_t = time() + killed_dur
+  killed_msg = killed_text[flr(rnd(#killed_text))+1]
   enemy_dialogue()
   player.morality += 1
   player.lvl_killc += 1
@@ -650,8 +650,9 @@ end
 player died, do this:
 ]]
 function player_die()
-  player.is_dead = true
-  game = "over"
+  if lvl>2 then --not tutorial
+    game = "over"
+  end
 end
 
 --[[
@@ -758,9 +759,9 @@ function display_attr()
   -- --kill limit
   -- for i=1,kill_limit do
   --   if i <= kill_limit-player.lvl_killc then
-  --     spr(blast_sp[1],(i-1)*8,8)
+  --     spr(angel_sp[1],(i-1)*8,8)
   --   else
-  --     spr(blast_sp[2],(i-1)*8,8)
+  --     spr(angel_sp[2],(i-1)*8,8)
   --   end
   -- end
   --kill limit
@@ -794,7 +795,7 @@ function display_attr()
   blast_belt[3].y = -4 + blast_belt[3].addy
   for i=1,#blast_belt do
     if i <= kill_limit-player.lvl_killc then
-      spr(blast_sp[1],player.x+blast_belt[i].x,player.y+blast_belt[i].y)
+      spr(angel_sp[1],player.x+blast_belt[i].x,player.y+blast_belt[i].y)
     end
   end
   --morality bar
@@ -819,7 +820,7 @@ function display_attr()
 end
 
 function check_exit()
-  if(lvl==2 and player.lvl_killc==3) mset(63,45,31)
+  if(lvl==2 and player.lvl_killc==3) mset(63,44,31)
   if mget(player.x/8+16*(levels[lvl]%8),player.y/8+flr(levels[lvl]/8)*16)==31 then
     if(not lvl_switched) new_level(false)
   elseif mget(player.x/8+16*(levels[lvl]%8),player.y/8+flr(levels[lvl]/8)*16)==47 then
@@ -1064,14 +1065,14 @@ function enemy_dialogue()
       not enemy[lvl][speaker].sees_you then
     print(msg,enemy[lvl][speaker].x+4-2*#msg,enemy[lvl][speaker].y-6,6)
   end
-  if time() < killtext_t and
-      killspeaker and
-      killspeaker != speaker then
-    print(killmsg,enemy[lvl][killspeaker].x+4-2*#killmsg,enemy[lvl][killspeaker].y-6,6)
-    enemy[lvl][killspeaker].wait_start = time()
-    enemy[lvl][killspeaker].waiting = true
+  if time() < sorrow_t and
+      sorrow_speaker and
+      sorrow_speaker != speaker then
+    print(sorrow_msg,enemy[lvl][sorrow_speaker].x+4-2*#sorrow_msg,enemy[lvl][sorrow_speaker].y-6,6)
+    enemy[lvl][sorrow_speaker].wait_start = time()
+    enemy[lvl][sorrow_speaker].waiting = true
   end
-  if time() < killed_speakt then
+  if time() < killed_t then
     print(killed_msg,killed_speaker.x+4-2*#killed_msg,killed_speaker.y-6,6)
   end
 end
@@ -1162,7 +1163,7 @@ function fall()
   local x2 = player.x+player.w-1
   if v_collide(x1,x2,y) then
     player.njump = 0
-    player.m = 0.5
+    player.m = 0
     if v_collide(x1,x2,y-0.5) then
       player.y = flr(player.y-0.5)
     end
@@ -1476,22 +1477,10 @@ function _update60()
    if player.hp<=0 then
      player_die()
    end
- elseif game=="over" then --dead
+ elseif game=="over" or game=="end" then --dead
    if btnp(5) then
      _init()
-     game = "game"
-     lvl = 2
-     new_level(true)
-     music(16)
    end
- elseif game=="end" then
-  if btnp(5) then
-    _init()
-    game = "game"
-    lvl = 2
-    new_level(true)
-    music(16)
-  end
  end
 end
 

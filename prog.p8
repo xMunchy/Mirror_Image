@@ -111,8 +111,8 @@ function _init()
   mbar_flash_dur = 1
   --sprites = {idle,walk1,walk2,crouch_idle,crouch_move,jump1,jump2,attack}
   neutral_sprites = {1,3,4,2,18,5,160,6}
-  evil_sprites = {32,34,35,33,49,36,160,37}
-  good_sprites = {38,40,41,39,55,42,160,43}
+  evil_sprites = {32,34,35,33,49,36,161,37}
+  good_sprites = {38,40,41,39,55,42,162,43}
   sprites = {neutral_sprites,evil_sprites,good_sprites}
   --size by 8x8 chunks
   --size = {idle,walk1,walk2,crouch_idle,crouch_move,jump,attack}
@@ -202,11 +202,9 @@ function _init()
   blast_colors = {1,5,6,7}
 
   --jumping variables
-  player.jump_tprev = 0 --jump time
-  player.jump_prog = 0 --jump progress in remaining height
   player.njump = 0 --first, second, or third jump
-  player.jump1 = 16 --height of first jump
-  player.jumpxtra = 8 --height of extra jumps
+  player.jump1 = 2 --height of first jump
+  player.jumpxtra = 1.65 --height of extra jumps
 
  -- player blasts --
  blast = {}
@@ -569,36 +567,24 @@ function start_jump()
  -- 6 = jump
  --start jump
  sfx(32)
- player.jump_tprev = time()
  player.is_jumping = true
  --choose jump height
  if player.njump==0 then
-  player.jump_prog = player.jump1
+   player.m = player.jump1
  else
-  player.jump_prog = player.jumpxtra
+   player.m = player.jumpxtra
  end
  player.y -= 1
  player.njump += 1
 end
 
 --find new position in jump
-function jump()
- local dt = time() - player.jump_tprev
- --check for ceiling
+function jump() --check for ceiling
  local x1 = player.x
  local x2 = player.x+player.w-1
- if v_collide(x1,x2,player.y-1)
- then
-  player.jump_prog = 0 --end jump
+ if v_collide(x1,x2,player.y-1) then --momentum go down
+  player.m = -0.2 --end jump
  end
- if dt > 0.005 and
-    player.jump_prog > 0
- then --do some jumping
-  player.y -= 2
-  player.jump_prog -= 1
-  player.jump_tprev = time()
- end
- if(player.jump_prog==0) player.is_jumping = false
 end
 
 --[[
@@ -1176,11 +1162,13 @@ function fall()
   local x2 = player.x+player.w-1
   if v_collide(x1,x2,y) then
     player.njump = 0
+    player.m = 0.5
     if v_collide(x1,x2,y-0.5) then
       player.y = flr(player.y-0.5)
     end
   else
-    if(not player.is_jumping) player.y += 1.5
+    player.y -= player.m
+    player.m -= 0.1
   end
   --make enemies fall
   for i=1,#enemy[lvl] do
@@ -1354,6 +1342,7 @@ function _update60()
     if btnp(5) then
      new_level(false)
      game = "game"
+     prev_t = time()
      music(16)
     end
   -- elseif game=="instr" then --instructions
@@ -1433,7 +1422,7 @@ function _update60()
        --falling
       if not v_collide(x1,x2,y2) then
         --6 = jumping/falling
-        if player.jump_prog<8 then
+        if player.m > 1 then
           change_sprite(7)
         else
           change_sprite(6)

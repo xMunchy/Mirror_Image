@@ -425,13 +425,14 @@ function new_level(toggled,dir,back,next)
     elseif lvl==16 then
       lvl = 19
     elseif lvl==15 or lvl==19 or lvl==9 then
+      lvl_transition_t = 0
       game = "end"
     end
   else --proceed to next map within this level
     lvl += 1
   end
   if(x[lvl]!=-1 and dir!="up" and not back) player.x = x[lvl]
-  if(y[lvl]!=-1 and not back) player.y = y[lvl]
+  if(y[lvl]!=-1 and not back and dir!="up") player.y = y[lvl]
 
   for i=1,#enemy[lvl] do --reset move timer for enemies
     enemy[lvl][i].prev_t = time()
@@ -2019,4 +2020,3 @@ __music__
 00 26252a44
 00 26242b2c
 02 26252a2c
-

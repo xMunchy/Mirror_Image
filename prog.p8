@@ -383,6 +383,7 @@ function new_level(toggled,dir,back,next)
   elseif lvl==2 then --end tutorial, enter game
     player.hp = player.max_hp
     player.morality = 0
+    player.prev_morality = 0
     player.lvl_killc = 0
     lvl = 3
     lvl_transition = 1
@@ -405,7 +406,7 @@ function new_level(toggled,dir,back,next)
     lvl_transition += 1
     player.prev_morality = player.morality
     player.morality -= kill_diff
-    ilvl_transition_t = time() + lvl_transition_dur
+    lvl_transition_t = time() + lvl_transition_dur
     if lvl==3 then
       lvl = 4
     elseif lvl==4 or lvl==6 then --branch
@@ -700,11 +701,13 @@ end
 player touched enemy!
 ]]
 function player_hit()
-  sfx(31)
-  if(not player.is_hit) player.hit_start = time()
-  player.is_hit = true
-  player.hit_prev_s = player.s
-  player.hp -= 1
+  if lvl>2 then
+    sfx(31)
+    if(not player.is_hit) player.hit_start = time()
+    player.is_hit = true
+    player.hit_prev_s = player.s
+    player.hp -= 1
+  end
 end
 
 --[[
